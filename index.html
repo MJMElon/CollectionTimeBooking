@@ -8,7 +8,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  *{font-family:'Outfit',system-ui,sans-serif;}body{background:#f1f5f9;margin:0;min-height:100vh;}
+  *{font-family:'Outfit',system-ui,sans-serif;}
+  html,body{overflow-x:hidden;max-width:100%;}
+  body{background:#f1f5f9;margin:0;min-height:100vh;}
   .fade-enter{animation:fadeIn .35s ease-out;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
@@ -57,7 +59,7 @@
   .qty-btn.active{border-color:#10b981;background:#10b981;color:white;box-shadow:0 4px 12px rgba(16,185,129,.3);}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#064e3b,#10b981);color:white;padding:14px 22px;border-radius:14px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 8px 24px rgba(16,185,129,.4);text-align:center;max-width:90vw;}
   .toast.show{opacity:1;}
-  .month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:white;}
+  .month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:white;width:100%;max-width:100%;box-sizing:border-box;}
   .month-header{background:#f8fafc;padding:8px 2px;text-align:center;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#64748b;border-bottom:2px solid #e2e8f0;border-right:1px solid #e2e8f0;min-width:0;overflow:hidden;}
   .month-header:last-child{border-right:none;}
   .month-cell{min-width:0;min-height:70px;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9;padding:4px 6px;cursor:pointer;transition:background .15s;overflow:hidden;}
@@ -103,21 +105,22 @@
   /* ── PHONE-FRIENDLY ADJUSTMENTS ── */
   @media(max-width:640px){
     .mjm-title{font-size:1.5rem;letter-spacing:.1em;}
-    .month-header{padding:6px 1px;font-size:9px;letter-spacing:.02em;}
-    .month-cell{min-height:62px;padding:3px 2px;}
+    .month-header{padding:6px 0;font-size:9px;letter-spacing:0;}
+    .month-cell{min-height:60px;padding:3px 2px;}
     .month-day-num{font-size:13px;margin-bottom:1px;}
-    .month-cell.today .month-day-num{width:24px;height:24px;border-radius:12px;font-size:12px;}
+    .month-cell.today .month-day-num{width:22px;height:22px;border-radius:11px;font-size:11px;}
     .month-holiday-tag{font-size:7px;letter-spacing:0;}
-    .booked-tag{font-size:7px;padding:0 4px;}
+    .booked-tag{font-size:7px;padding:0 3px;}
     .modal-overlay{padding:8px;}
     .modal-box{border-radius:18px;}
     .qty-btn{padding:9px 12px;font-size:13px;}
     .search-input{padding:10px 14px;font-size:13px;}
   }
   @media(max-width:380px){
-    .month-cell{min-height:56px;padding:2px 1px;}
+    .month-header{font-size:8px;padding:5px 0;}
+    .month-cell{min-height:54px;padding:2px 1px;}
     .month-day-num{font-size:12px;}
-    .month-cell.today .month-day-num{width:22px;height:22px;border-radius:11px;font-size:11px;}
+    .month-cell.today .month-day-num{width:20px;height:20px;border-radius:10px;font-size:10px;}
   }
 </style>
 </head>
@@ -354,8 +357,10 @@ function renderMonth(){
   document.getElementById('month-label').textContent=MNAMES[currentMonth]+' '+currentYear;
   var el=document.getElementById('month-grid'),firstDay=new Date(currentYear,currentMonth,1);
   var startDow=firstDay.getDay();if(startDow===0)startDow=7;
+  var narrow=window.innerWidth<=380;
+  var dayNames=narrow?['M','T','W','T','F','S','S']:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   var html='<div class="month-grid">';
-  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function(d){html+='<div class="month-header">'+d+'</div>';});
+  dayNames.forEach(function(d){html+='<div class="month-header">'+d+'</div>';});
   var cd=new Date(firstDay);cd.setDate(cd.getDate()-(startDow-1));
   for(var r=0;r<6;r++){
     var has=false;
