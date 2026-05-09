@@ -68,8 +68,8 @@
   .month-cell.past{opacity:.4;cursor:default;}.month-cell.past:hover{background:transparent;}
   .month-cell.closed{background:#f8f8f8;cursor:default;}.month-cell.closed:hover{background:#f8f8f8;}
   .month-cell.holiday{background:#fef2f2;cursor:default;}.month-cell.holiday:hover{background:#fef2f2;}
-  .month-day-num{font-size:12px;font-weight:900;color:#334155;margin-bottom:2px;}
-  .month-cell.today .month-day-num{color:white;background:#10b981;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:12px;}
+  .month-day-num{font-size:14px;font-weight:900;color:#334155;margin-bottom:2px;}
+  .month-cell.today .month-day-num{color:white;background:#10b981;display:inline-flex;align-items:center;justify-content:center;width:29px;height:29px;border-radius:14px;}
   .month-holiday-tag{display:block;font-size:8px;font-weight:700;color:#dc2626;line-height:1.2;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .booked-tag{display:inline-block;background:#fef3c7;color:#92400e;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;}
   .slot-full{background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;display:inline-block;}
@@ -476,8 +476,10 @@ function validateIdentity(){
 
     identityTimer=setTimeout(async function(){
       var {data}=await _supabase.from('shared_al_orders')
-        .select('al_number,customer_name,order_number')
+        .select('al_number,customer_name,order_number,status,balance_quantity')
         .or('order_number.ilike.%'+val+'%,al_number.ilike.%'+val+'%')
+        .not('status','in','("Cancelled","Collected")')
+        .gt('balance_quantity',0)
         .limit(1);
 
       identityChecking=false;
@@ -487,7 +489,7 @@ function validateIdentity(){
         identityValid=true;
       } else {
         status.className='text-[10px] font-bold mt-2 text-red-500';
-        status.textContent='\u274c Invalid order number. Please check and enter the correct order number or use your company name instead.';
+        status.textContent='\u274c Order not found or already collected. Please check your order number or use your company name instead.';
         identityValid=false;
       }
       checkReady();
