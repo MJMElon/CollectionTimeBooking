@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MJM Nursery — Collection Booking</title>
+<link rel="preconnect" href="https://kibqjztozokohqmhqqqf.supabase.co" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://api.open-meteo.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
@@ -87,6 +93,12 @@
   .status-cancelled{background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:900;text-transform:uppercase;text-decoration:line-through;}
   .est-box{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:12px 16px;margin-top:8px;}
 
+  /* ── PURCHASE SEEDLINGS BUTTON ── */
+  .purchase-btn{position:absolute;top:14px;right:14px;display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#c9a84c,#a08538);color:white;font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:8px 14px;border-radius:999px;text-decoration:none;box-shadow:0 4px 12px rgba(201,168,76,.35);transition:transform .15s,box-shadow .15s;z-index:5;}
+  .purchase-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(201,168,76,.5);}
+  .purchase-btn span:first-child{font-size:13px;line-height:1;}
+  @media (max-width:480px){.purchase-btn{top:10px;right:10px;font-size:9px;padding:6px 10px;}.purchase-btn span:first-child{font-size:11px;}}
+
   /* ── WEATHER STRIP (matches operations module) ── */
   .weather-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none;}
   .weather-strip::-webkit-scrollbar{display:none;}
@@ -106,6 +118,9 @@
 <div class="bg-white border-b border-slate-200 px-4 sm:px-6 py-6 text-center shadow-sm overflow-hidden" style="position:relative;">
   <div class="mjm-title" id="mjm-title">MJM NURSERY</div>
   <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Collection Time Slot Booking</div>
+  <a href="https://ai.mjmnursery.com/salesweb/salesweb_storefront.html" class="purchase-btn" title="Order more seedlings">
+    <span>🛒</span><span>Purchase Seedlings</span>
+  </a>
   <div class="leaf-trail" id="leaf-trail"></div>
 </div>
 
@@ -349,7 +364,13 @@ async function loadMonth(){
   var {data}=await _supabase.from('shared_collection_bookings').select('id,booking_date,start_time,end_time,status,collection_qty').gte('booking_date',fmtDate(f)).lte('booking_date',fmtDate(l)).neq('status','cancelled');
   monthBookings=data||[];
 }
-window.addEventListener('DOMContentLoaded',function(){loadMonth().then(function(){renderMonth();});loadWeather();});
+window.addEventListener('DOMContentLoaded',function(){
+  // Render calendar shell immediately so the user sees something instantly,
+  // then load bookings in the background and re-render once they arrive.
+  renderMonth();
+  loadMonth().then(function(){renderMonth();});
+  loadWeather();
+});
 
 // ═══════════════ SEARCH ═══════════════
 async function searchMyBookings(){
