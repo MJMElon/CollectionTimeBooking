@@ -145,7 +145,7 @@
     </div>
     <div class="p-5 sm:p-6">
       <div id="my-bk-content"></div>
-      <div class="text-[10px] font-bold text-slate-400 mt-4 text-center leading-relaxed">If you need to change your booked time, please contact our MJM Nursery person in charge.</div>
+      <div class="text-[10px] font-bold text-slate-400 mt-4 text-center leading-relaxed">Click <span class="font-black text-blue-700">Change</span> to reschedule your booking. Need to cancel? Contact MJM Nursery person in charge.</div>
     </div>
     <div class="px-5 sm:px-6 pb-6 flex justify-end border-t border-slate-100 pt-4"><button onclick="closeMyBookings()" class="text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-widest bg-slate-50 px-6 py-3 rounded-full border border-slate-200 cursor-pointer transition-colors">Close</button></div>
   </div>
@@ -162,6 +162,49 @@
       <div class="dash-card overflow-hidden border border-slate-200" id="time-slots-list"></div>
     </div>
     <div class="px-5 sm:px-6 pb-6 flex justify-end border-t border-slate-100 pt-4"><button onclick="closeTimeModal()" class="text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-widest bg-slate-50 px-6 py-3 rounded-full border border-slate-200 cursor-pointer transition-colors">Cancel</button></div>
+  </div>
+</div>
+
+<!-- CHANGE BOOKING MODAL (customer self-edit) -->
+<div class="modal-overlay" id="change-modal" style="z-index:240;">
+  <div class="modal-box">
+    <div style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);" class="px-6 pt-4 pb-6 rounded-t-[24px]">
+      <div class="flex justify-between items-center mb-3">
+        <div class="text-[10px] font-black text-blue-200 uppercase tracking-widest">&#128257; Change Booking</div>
+        <button onclick="closeChangeBooking()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black text-lg flex items-center justify-center transition-colors shrink-0">&times;</button>
+      </div>
+      <div class="text-sm font-bold text-white" id="ch-current-label">&mdash;</div>
+    </div>
+    <div class="p-5 sm:p-6 space-y-4">
+      <div>
+        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">New Date</label>
+        <input id="ch-date" type="date" class="search-input text-sm" style="padding:10px 14px;" onchange="onChangeDateChange()">
+        <div id="ch-date-warn" class="hidden text-[10px] font-bold text-red-500 mt-2"></div>
+      </div>
+      <div>
+        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">New Time Slot</label>
+        <div class="dash-card overflow-hidden border border-slate-200" id="ch-slots-list" style="max-height:200px;overflow-y:auto;">
+          <div class="text-[10px] font-bold text-slate-300 px-4 py-3">Pick a date first…</div>
+        </div>
+        <div id="ch-time-label" class="hidden text-[10px] font-bold text-blue-700 mt-2"></div>
+      </div>
+      <div>
+        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Collection Quantity (Seedlings) *</div>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <button class="qty-btn ch-qty-btn" onclick="pickChangeQty(50)">+50</button>
+          <button class="qty-btn ch-qty-btn" onclick="pickChangeQty(100)">+100</button>
+          <button class="qty-btn ch-qty-btn" onclick="pickChangeQty(500)">+500</button>
+          <button class="qty-btn ch-qty-btn" onclick="pickChangeQty(1000)">+1,000</button>
+          <input id="ch-custom-qty" type="number" min="1" class="search-input text-sm" style="padding:10px 14px;width:160px;" placeholder="Other quantity" oninput="pickChangeCustomQty()">
+        </div>
+        <div id="ch-qty-label" class="text-sm font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 hidden">Quantity: <span id="ch-qty-value">0</span> seedlings</div>
+        <div id="ch-overflow-warn" class="hidden text-[10px] font-bold text-red-500 mt-2"></div>
+      </div>
+    </div>
+    <div class="px-5 sm:px-6 pb-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
+      <button onclick="closeChangeBooking()" class="text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-widest bg-slate-50 px-6 py-3 rounded-full border border-slate-200 cursor-pointer transition-colors">Cancel</button>
+      <button id="ch-submit" onclick="saveChangeBooking()" disabled class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-[11px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors">Save Changes</button>
+    </div>
   </div>
 </div>
 
@@ -218,6 +261,10 @@
       We look forward to seeing you!<br>
       Please arrive on time for a smooth collection.
     </div>
+    <button onclick="shareWhatsApp()" class="w-full py-3 mb-2 bg-[#25D366] hover:bg-[#1faa54] text-white font-black text-[11px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors flex items-center justify-center gap-2">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.85 9.85 0 0 0 1.51 5.26L4.41 19.158l3.41-.965zm5.392-3.21c-.741.001-1.452-.213-2.072-.595-1.137-.711-2.143-1.626-2.842-2.778-.704-1.158-1.067-2.398-1.066-3.617 0-1.013.413-1.95 1.07-2.541.305-.273.717-.43 1.142-.43.13 0 .264.005.39.027.226.04.404.182.498.402.255.59.624 1.65.66 1.755.05.157.085.343-.014.546-.099.203-.204.317-.355.491-.151.174-.317.388-.452.522-.135.135-.275.281-.118.55.157.27.7 1.156 1.502 1.872.928.825 1.708 1.083 1.99 1.213.282.13.448.108.612-.066.165-.174.71-.831.9-1.116.19-.286.38-.236.642-.142.262.094 1.668.787 1.954.93.286.142.476.213.547.331.071.118.071.687-.187 1.348-.258.661-1.488 1.27-2.038 1.32-.55.05-.55.394-3.464-.66z"/></svg>
+      Share booking via WhatsApp
+    </button>
     <button onclick="closeSuccessModal()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors">OK</button>
   </div>
 </div>
@@ -232,6 +279,7 @@ var _supabase=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 var RATE=350;var MAX_LOAD=600;
 var currentMonth=new Date().getMonth();var currentYear=new Date().getFullYear();
 var monthBookings=[];var selectedDate=null;var selectedTime=null;var selectedQty=0;
+var searchedBookings=[];var editingBooking=null;var editDate=null;var editTime=null;var editQty=0;
 
 var MNAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
 var HRS_WD=[8,9,10,11,12,13,14,15,16];var HRS_SAT=[8,9,10,11];
@@ -247,9 +295,10 @@ function hrLoad(q){return q/hrsNeeded(q);}
 function closing(ds){return new Date(ds+'T00:00:00').getDay()===6?12:17;}
 function isHoliday(ds){return !!HOLIDAYS[ds];}
 
-function getHourLoad(ds,h){
+function getHourLoad(ds,h,excludeId){
   var total=0;
   monthBookings.forEach(function(b){
+    if(excludeId&&b.id===excludeId)return;
     if((b.booking_date||'').substring(0,10)!==ds||b.status==='cancelled')return;
     var s=parseInt((b.start_time||'00').split(':')[0]),e=parseInt((b.end_time||'00').split(':')[0]);
     if(e<=s)e=s+1;
@@ -257,28 +306,27 @@ function getHourLoad(ds,h){
   });
   return total;
 }
-function remaining(ds,h){return Math.max(0,MAX_LOAD-getHourLoad(ds,h));}
+function remaining(ds,h,excludeId){return Math.max(0,MAX_LOAD-getHourLoad(ds,h,excludeId));}
 
-// Calculate the max qty bookable starting at startH
-function maxBookableQty(ds,startH){
+// Calculate the max qty bookable starting at startH (excludeId optional)
+function maxBookableQty(ds,startH,excludeId){
   var cl=closing(ds);
-  // Try increasing qty until canFit fails
   var best=0;
   for(var tryQty=50;tryQty<=5000;tryQty+=50){
     var hrs=hrsNeeded(tryQty),endH=startH+hrs;
     if(endH>cl)break;
     var ld=hrLoad(tryQty),ok=true;
-    for(var h=startH;h<endH;h++){if(getHourLoad(ds,h)+ld>MAX_LOAD){ok=false;break;}}
+    for(var h=startH;h<endH;h++){if(getHourLoad(ds,h,excludeId)+ld>MAX_LOAD){ok=false;break;}}
     if(ok)best=tryQty;else break;
   }
   return best;
 }
 
-function canFit(ds,startH,qty){
+function canFit(ds,startH,qty,excludeId){
   var hrs=hrsNeeded(qty),endH=startH+hrs,cl=closing(ds);
   if(endH>cl)return false;
   var ld=hrLoad(qty);
-  for(var h=startH;h<endH;h++){if(getHourLoad(ds,h)+ld>MAX_LOAD)return false;}
+  for(var h=startH;h<endH;h++){if(getHourLoad(ds,h,excludeId)+ld>MAX_LOAD)return false;}
   return true;
 }
 function dayBusyHrs(ds){
@@ -298,7 +346,7 @@ function dayHasBookings(ds){
 // ═══════════════ LOAD ═══════════════
 async function loadMonth(){
   var f=new Date(currentYear,currentMonth,1),l=new Date(currentYear,currentMonth+1,0);
-  var {data}=await _supabase.from('shared_collection_bookings').select('booking_date,start_time,end_time,status,collection_qty').gte('booking_date',fmtDate(f)).lte('booking_date',fmtDate(l)).neq('status','cancelled');
+  var {data}=await _supabase.from('shared_collection_bookings').select('id,booking_date,start_time,end_time,status,collection_qty').gte('booking_date',fmtDate(f)).lte('booking_date',fmtDate(l)).neq('status','cancelled');
   monthBookings=data||[];
 }
 window.addEventListener('DOMContentLoaded',function(){loadMonth().then(function(){renderMonth();});loadWeather();});
@@ -308,17 +356,20 @@ async function searchMyBookings(){
   var q=document.getElementById('search-input').value.trim();
   if(q.length<2){showToast('Please enter at least 2 characters');return;}
   var todayStr=fmtDate(new Date());
-  var {data}=await _supabase.from('shared_collection_bookings').select('booking_date,start_time,end_time,customer_name,order_number,collection_qty,status').or('order_number.ilike.%'+q+'%,customer_name.ilike.%'+q+'%').gte('booking_date',todayStr).order('booking_date',{ascending:true}).order('start_time',{ascending:true}).limit(20);
+  var {data}=await _supabase.from('shared_collection_bookings').select('id,booking_date,start_time,end_time,customer_name,order_number,collection_qty,status,notes').or('order_number.ilike.%'+q+'%,customer_name.ilike.%'+q+'%').gte('booking_date',todayStr).order('booking_date',{ascending:true}).order('start_time',{ascending:true}).limit(20);
+  searchedBookings=data||[];
   var el=document.getElementById('my-bk-content');
   if(!data||!data.length){
     el.innerHTML='<div class="text-center py-8"><div class="text-3xl mb-2">📋</div><div class="text-[11px] font-black text-slate-300 uppercase tracking-widest">No bookings found</div></div>';
   } else {
     document.getElementById('my-bk-title').textContent=data[0].customer_name||q;
-    var html='<div class="rounded-2xl border border-slate-200 overflow-hidden overflow-x-auto"><table class="my-bk-table"><thead><tr><th>Date</th><th>Time</th><th>Quantity</th><th>Duration</th><th>Status</th></tr></thead><tbody>';
+    var html='<div class="rounded-2xl border border-slate-200 overflow-hidden overflow-x-auto"><table class="my-bk-table"><thead><tr><th>Date</th><th>Time</th><th>Quantity</th><th>Duration</th><th>Status</th><th></th></tr></thead><tbody>';
     data.forEach(function(b){
       var dt=b.booking_date?new Date(b.booking_date+'T00:00:00').toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric',weekday:'short'}):'—';
       var sH=parseInt((b.start_time||'08').split(':')[0]),eH=parseInt((b.end_time||'09').split(':')[0]);
-      html+='<tr><td>'+dt+'</td><td>'+fmtHr(sH)+' – '+fmtHr(eH)+'</td><td class="font-black text-emerald-700">'+(b.collection_qty||0).toLocaleString()+'</td><td>'+(eH-sH)+' hr</td><td><span class="'+(b.status==='cancelled'?'status-cancelled':b.status==='pending'?'status-pending':'status-booked')+'">'+(b.status==='cancelled'?'Cancelled':b.status==='pending'?'Pending':'Confirmed Appointment')+'</span></td></tr>';
+      var canEdit=b.status!=='cancelled';
+      var changeBtn=canEdit?'<button onclick="openChangeBooking(\''+b.id+'\')" class="text-[9px] font-black text-blue-700 hover:text-white hover:bg-blue-700 uppercase tracking-widest bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 cursor-pointer transition-colors">Change</button>':'';
+      html+='<tr><td>'+dt+'</td><td>'+fmtHr(sH)+' – '+fmtHr(eH)+'</td><td class="font-black text-emerald-700">'+(b.collection_qty||0).toLocaleString()+'</td><td>'+(eH-sH)+' hr</td><td><span class="'+(b.status==='cancelled'?'status-cancelled':b.status==='pending'?'status-pending':'status-booked')+'">'+(b.status==='cancelled'?'Cancelled':b.status==='pending'?'Pending':'Confirmed Appointment')+'</span></td><td>'+changeBtn+'</td></tr>';
     });
     html+='</tbody></table></div>';el.innerHTML=html;
   }
@@ -569,6 +620,152 @@ function scheduleFirecracker(){
   setTimeout(function(){firecracker();scheduleFirecracker();},delay);
 }
 scheduleFirecracker();
+
+// ════════════════════════════════════════════════════════
+//  CHANGE BOOKING (customer self-edit)
+// ════════════════════════════════════════════════════════
+function openChangeBooking(id){
+  var b=searchedBookings.find(function(x){return x.id===id;});
+  if(!b)return;
+  editingBooking=b;
+  editDate=b.booking_date.substring(0,10);
+  editTime=b.start_time.substring(0,5);
+  editQty=b.collection_qty||0;
+
+  var d=new Date(editDate+'T00:00:00');
+  var sH=parseInt(editTime.split(':')[0]),eH=parseInt((b.end_time||'00').split(':')[0]);
+  document.getElementById('ch-current-label').textContent='Current: '+d.toLocaleDateString('en-MY',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+' — '+fmtHr(sH)+' to '+fmtHr(eH)+' ('+(b.collection_qty||0).toLocaleString()+' seedlings)';
+
+  document.getElementById('ch-date').value=editDate;
+  document.getElementById('ch-date').min=fmtDate(new Date());
+  document.getElementById('ch-date-warn').classList.add('hidden');
+  document.getElementById('ch-custom-qty').value='';
+  document.getElementById('ch-qty-value').textContent=editQty.toLocaleString();
+  document.getElementById('ch-qty-label').classList.remove('hidden');
+  document.getElementById('ch-overflow-warn').classList.add('hidden');
+  document.querySelectorAll('.ch-qty-btn').forEach(function(btn){
+    var v=parseInt(btn.textContent.replace(/[^0-9]/g,''));
+    btn.classList.toggle('active',v===editQty);
+  });
+
+  // Make sure month for editDate is loaded so capacity calc is correct
+  loadMonth().then(function(){renderChangeSlots();updateChangeReady();});
+  document.getElementById('change-modal').classList.add('open');
+}
+function closeChangeBooking(){
+  document.getElementById('change-modal').classList.remove('open');
+  editingBooking=null;
+}
+
+function onChangeDateChange(){
+  var v=document.getElementById('ch-date').value;
+  if(!v){return;}
+  var d=new Date(v+'T00:00:00'),dow=d.getDay();
+  var warn=document.getElementById('ch-date-warn');
+  if(isPast(d)){warn.classList.remove('hidden');warn.textContent='⚠️ Cannot pick a past date.';return;}
+  if(dow===0){warn.classList.remove('hidden');warn.textContent='⚠️ Sunday is closed.';return;}
+  if(HOLIDAYS[v]){warn.classList.remove('hidden');warn.textContent='⚠️ '+HOLIDAYS[v]+' (Public Holiday — closed).';return;}
+  warn.classList.add('hidden');
+  editDate=v;
+  // Reload monthBookings if user picked a different month
+  var nm=d.getMonth(),ny=d.getFullYear();
+  if(nm!==currentMonth||ny!==currentYear){
+    var savedM=currentMonth,savedY=currentYear;
+    currentMonth=nm;currentYear=ny;
+    loadMonth().then(function(){
+      currentMonth=savedM;currentYear=savedY;
+      renderChangeSlots();updateChangeReady();
+    });
+  }else{
+    renderChangeSlots();updateChangeReady();
+  }
+}
+
+function renderChangeSlots(){
+  if(!editDate)return;
+  var d=new Date(editDate+'T00:00:00'),dow=d.getDay();
+  var hours=dow===6?HRS_SAT:HRS_WD;
+  var excludeId=editingBooking?editingBooking.id:null;
+  var html='';
+  hours.forEach(function(h){
+    var ts=String(h).padStart(2,'0')+':00';
+    var maxQty=maxBookableQty(editDate,h,excludeId);
+    var load=getHourLoad(editDate,h,excludeId);
+    var sel=(ts===editTime)?'background:#dbeafe;border-left:4px solid #1d4ed8;':'';
+    if(load>=MAX_LOAD||maxQty<=0){
+      html+='<div class="time-slot-row full-slot"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div><span class="slot-full">Fully Booked</span></div>';
+    }else{
+      var label=load>0?'<span class="slot-busy">Available</span>':'<span class="slot-available">✅ Available</span>';
+      html+='<div class="time-slot-row" style="'+sel+'" onclick="pickChangeTime(\''+ts+'\')"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div>'+label+'</div>';
+    }
+  });
+  document.getElementById('ch-slots-list').innerHTML=html;
+  if(editTime){
+    var sH=parseInt(editTime.split(':')[0]);
+    document.getElementById('ch-time-label').classList.remove('hidden');
+    document.getElementById('ch-time-label').textContent='Selected: '+fmtHr(sH);
+  }
+}
+
+function pickChangeTime(ts){editTime=ts;renderChangeSlots();updateChangeReady();}
+
+function pickChangeQty(q){
+  editQty=q;document.getElementById('ch-custom-qty').value='';
+  document.querySelectorAll('.ch-qty-btn').forEach(function(b){var v=parseInt(b.textContent.replace(/[^0-9]/g,''));b.classList.toggle('active',v===q);});
+  document.getElementById('ch-qty-value').textContent=q.toLocaleString();
+  document.getElementById('ch-qty-label').classList.remove('hidden');
+  updateChangeReady();
+}
+function pickChangeCustomQty(){
+  var v=parseInt(document.getElementById('ch-custom-qty').value)||0;
+  document.querySelectorAll('.ch-qty-btn').forEach(function(b){b.classList.remove('active');});
+  if(v>0){editQty=v;document.getElementById('ch-qty-value').textContent=v.toLocaleString();document.getElementById('ch-qty-label').classList.remove('hidden');}
+  else{editQty=0;document.getElementById('ch-qty-label').classList.add('hidden');}
+  updateChangeReady();
+}
+
+function updateChangeReady(){
+  var btn=document.getElementById('ch-submit'),warn=document.getElementById('ch-overflow-warn');
+  if(!editDate||!editTime||editQty<=0){btn.disabled=true;warn.classList.add('hidden');return;}
+  var startH=parseInt(editTime.split(':')[0]),excludeId=editingBooking?editingBooking.id:null;
+  var fits=canFit(editDate,startH,editQty,excludeId);
+  if(!fits){
+    var cap=maxBookableQty(editDate,startH,excludeId);
+    warn.classList.remove('hidden');
+    warn.textContent='⚠️ Slot can fit at most '+cap.toLocaleString()+' seedlings starting at '+fmtHr(startH)+'. Reduce qty or pick another slot.';
+    btn.disabled=true;
+  }else{warn.classList.add('hidden');btn.disabled=false;}
+}
+
+async function saveChangeBooking(){
+  if(!editingBooking)return;
+  var btn=document.getElementById('ch-submit');btn.disabled=true;btn.textContent='Saving…';
+  var startH=parseInt(editTime.split(':')[0]),hrs=hrsNeeded(editQty),endH=startH+hrs;
+  var updates={booking_date:editDate,start_time:editTime,end_time:String(endH).padStart(2,'0')+':00',collection_qty:editQty};
+  var {error}=await _supabase.from('shared_collection_bookings').update(updates).eq('id',editingBooking.id);
+  if(error){showToast('❌ '+error.message);btn.disabled=false;btn.textContent='Save Changes';return;}
+  btn.textContent='Save Changes';
+  closeChangeBooking();
+  showToast('✅ Booking updated');
+  await loadMonth();renderMonth();
+  // Refresh search results
+  searchMyBookings();
+}
+
+// ════════════════════════════════════════════════════════
+//  WHATSAPP SHARE
+// ════════════════════════════════════════════════════════
+function shareWhatsApp(){
+  var ds=selectedDate,sH=parseInt(selectedTime.split(':')[0]),hrs=hrsNeeded(selectedQty),eH=sH+hrs;
+  var d=new Date(ds+'T00:00:00');
+  var dateStr=d.toLocaleDateString('en-MY',{weekday:'long',day:'2-digit',month:'short',year:'numeric'});
+  var msg='🌱 MJM Nursery Collection Booking\n\n'+
+    '📅 Date: '+dateStr+'\n'+
+    '⏰ Time: '+fmtHr(sH)+' – '+fmtHr(eH)+' ('+hrs+' hr)\n'+
+    '🌿 Quantity: '+selectedQty.toLocaleString()+' seedlings\n\n'+
+    'Please arrive on time for a smooth collection. Thank you!';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
 
 // ════════════════════════════════════════════════════════
 //  WEATHER FORECAST (Open-Meteo — Miri, fixed 7-day window)
