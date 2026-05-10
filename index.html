@@ -147,7 +147,7 @@
   </div>
   <div class="dash-card p-0 overflow-x-auto"><div id="month-grid"></div></div>
   <a href="https://ai.mjmnursery.com/salesweb/salesweb_storefront.html" class="purchase-btn dash-card" title="Order more seedlings">
-    <span>&#128722;</span><span>Purchase Seedlings — Order Now</span>
+    <span>🛒</span><span>Purchase Seedlings — Order Now</span>
   </a>
   <div class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mon&ndash;Fri 8AM&ndash;5PM &bull; Sat 8AM&ndash;12PM &bull; Sun &amp; Holidays Closed</div>
 </div>
@@ -300,6 +300,15 @@ var searchedBookings=[];var editingBooking=null;var editDate=null;var editTime=n
 var MNAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
 var HRS_WD=[8,9,10,11,12,13,14,15,16];var HRS_SAT=[8,9,10,11];
 var HOLIDAYS={'2026-01-01':'New Year','2026-01-14':'Nuzul Al-Quran','2026-01-29':'Thaipusam','2026-02-01':'FT Day','2026-02-17':'CNY','2026-02-18':'CNY','2026-03-28':'Hari Raya Aidilfitri','2026-03-29':'Hari Raya Aidilfitri','2026-05-01':'Labour Day','2026-05-11':'Vesak Day','2026-06-01':'Agong Birthday','2026-06-04':'Hari Raya Haji','2026-06-05':'Hari Raya Haji','2026-06-25':'Awal Muharram','2026-08-31':'Merdeka Day','2026-09-03':'Maulidur Rasul','2026-09-16':'Malaysia Day','2026-10-20':'Deepavali','2026-12-25':'Christmas'};
+var DATE_OVERRIDES={};
+
+async function loadDateOverrides(){
+  try{
+    var {data}=await _supabase.from('shared_date_overrides').select('*');
+    DATE_OVERRIDES={};
+    (data||[]).forEach(function(o){DATE_OVERRIDES[o.date_str]=o;});
+  }catch(e){console.error('loadDateOverrides:',e);}
+}
 
 function fmtDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function isToday(d){var t=new Date();return d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()&&d.getDate()===t.getDate();}
@@ -308,8 +317,34 @@ function fmtHr(h){if(h<12)return h+' AM';if(h===12)return '12 PM';return(h-12)+'
 function slotLbl(h){return fmtHr(h)+' – '+fmtHr(h+1);}
 function hrsNeeded(q){return Math.ceil(q/RATE);}
 function hrLoad(q){return q/hrsNeeded(q);}
-function closing(ds){return new Date(ds+'T00:00:00').getDay()===6?12:17;}
 function isHoliday(ds){return !!HOLIDAYS[ds];}
+
+// Override-aware: returns true if this date is closed (no booking allowed)
+function isDateClosed(ds){
+  var ovr=DATE_OVERRIDES[ds];
+  if(ovr) return !ovr.is_open;
+  var d=new Date(ds+'T00:00:00');
+  return d.getDay()===0||!!HOLIDAYS[ds];
+}
+
+// Override-aware: returns array of bookable hours for this date
+function getHoursFor(ds){
+  var ovr=DATE_OVERRIDES[ds];
+  if(ovr){
+    if(!ovr.is_open) return [];
+    var arr=[];for(var h=ovr.open_hour;h<ovr.close_hour;h++) arr.push(h);
+    return arr;
+  }
+  var d=new Date(ds+'T00:00:00'),dow=d.getDay();
+  if(dow===0||HOLIDAYS[ds]) return [];
+  return dow===6?HRS_SAT:HRS_WD;
+}
+
+function closing(ds){
+  var ovr=DATE_OVERRIDES[ds];
+  if(ovr&&ovr.is_open&&ovr.close_hour) return ovr.close_hour;
+  return new Date(ds+'T00:00:00').getDay()===6?12:17;
+}
 
 function getHourLoad(ds,h,excludeId){
   var total=0;
@@ -346,12 +381,12 @@ function canFit(ds,startH,qty,excludeId){
   return true;
 }
 function dayBusyHrs(ds){
-  var hours=new Date(ds+'T00:00:00').getDay()===6?HRS_SAT:HRS_WD;
+  var hours=getHoursFor(ds);
   var c=0;hours.forEach(function(h){if(getHourLoad(ds,h)>0)c++;});return c;
 }
 function isDayFullyBooked(ds){
-  var d=new Date(ds+'T00:00:00'),dow=d.getDay();
-  var hours=dow===6?HRS_SAT:HRS_WD;
+  var hours=getHoursFor(ds);
+  if(!hours.length) return false;
   for(var i=0;i<hours.length;i++){if(maxBookableQty(ds,hours[i])>0)return false;}
   return true;
 }
@@ -362,14 +397,17 @@ function dayHasBookings(ds){
 // ═══════════════ LOAD ═══════════════
 async function loadMonth(){
   var f=new Date(currentYear,currentMonth,1),l=new Date(currentYear,currentMonth+1,0);
-  var {data}=await _supabase.from('shared_collection_bookings').select('id,booking_date,start_time,end_time,status,collection_qty').gte('booking_date',fmtDate(f)).lte('booking_date',fmtDate(l)).neq('status','cancelled');
-  monthBookings=data||[];
+  var results=await Promise.all([
+    _supabase.from('shared_collection_bookings').select('id,booking_date,start_time,end_time,status,collection_qty').gte('booking_date',fmtDate(f)).lte('booking_date',fmtDate(l)).neq('status','cancelled'),
+    loadDateOverrides()
+  ]);
+  monthBookings=(results[0]&&results[0].data)||[];
 }
 window.addEventListener('DOMContentLoaded',function(){
   // Render calendar shell immediately so the user sees something instantly,
-  // then load bookings in the background and re-render once they arrive.
+  // then load bookings + overrides in the background and re-render once they arrive.
   renderMonth();
-  loadMonth().then(function(){renderMonth();});
+  Promise.all([loadMonth(),loadDateOverrides()]).then(function(){renderMonth();});
   loadWeather();
 });
 
@@ -414,11 +452,13 @@ function renderMonth(){
     var has=false;
     for(var c=0;c<7;c++){
       var isTM=cd.getMonth()===currentMonth,ds=fmtDate(cd),dow=cd.getDay();
-      var isSun=dow===0,hol=HOLIDAYS[ds],closed=isSun||!!hol;
+      var hol=HOLIDAYS[ds],closed=isDateClosed(ds);
+      var ovr=DATE_OVERRIDES[ds];
+      var showHoliday=hol&&!(ovr&&ovr.is_open); // hide holiday tag if overridden open
       if(isTM)has=true;
-      var cls='month-cell'+(isToday(cd)?' today':'')+(isPast(cd)?' past':'')+(!isTM?' other-month':'')+(closed?' closed':'')+(hol?' holiday':'');
+      var cls='month-cell'+(isToday(cd)?' today':'')+(isPast(cd)?' past':'')+(!isTM?' other-month':'')+(closed?' closed':'')+(showHoliday?' holiday':'');
       var inner='<div class="month-day-num">'+cd.getDate()+'</div>';
-      if(hol)inner+='<div class="month-holiday-tag">🇲🇾 '+hol+'</div>';
+      if(showHoliday)inner+='<div class="month-holiday-tag">🇲🇾 '+hol+'</div>';
       if(isTM&&!closed&&!isPast(cd)){
         if(isDayFullyBooked(ds)){inner+='<div class="booked-tag">Fully Booked</div>';}
         else{inner+='<div style="display:inline-block;background:#d1fae5;color:#065f46;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Open</div>';}
@@ -439,7 +479,7 @@ function openTimeModal(ds){
   var d=new Date(ds+'T00:00:00');
   var dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   document.getElementById('tm-date-label').textContent=dn[d.getDay()]+', '+d.toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'});
-  var dow=d.getDay(),hours=dow===6?HRS_SAT:HRS_WD;
+  var hours=getHoursFor(ds);
 
   var html='';
   hours.forEach(function(h){
@@ -682,11 +722,14 @@ function closeChangeBooking(){
 function onChangeDateChange(){
   var v=document.getElementById('ch-date').value;
   if(!v){return;}
-  var d=new Date(v+'T00:00:00'),dow=d.getDay();
+  var d=new Date(v+'T00:00:00');
   var warn=document.getElementById('ch-date-warn');
   if(isPast(d)){warn.classList.remove('hidden');warn.textContent='⚠️ Cannot pick a past date.';return;}
-  if(dow===0){warn.classList.remove('hidden');warn.textContent='⚠️ Sunday is closed.';return;}
-  if(HOLIDAYS[v]){warn.classList.remove('hidden');warn.textContent='⚠️ '+HOLIDAYS[v]+' (Public Holiday — closed).';return;}
+  if(isDateClosed(v)){
+    var ovr=DATE_OVERRIDES[v];
+    var reason=ovr?'manually closed':(d.getDay()===0?'Sunday is closed':(HOLIDAYS[v]+' (Public Holiday — closed)'));
+    warn.classList.remove('hidden');warn.textContent='⚠️ '+reason+'.';return;
+  }
   warn.classList.add('hidden');
   editDate=v;
   // Reload monthBookings if user picked a different month
@@ -705,8 +748,7 @@ function onChangeDateChange(){
 
 function renderChangeSlots(){
   if(!editDate)return;
-  var d=new Date(editDate+'T00:00:00'),dow=d.getDay();
-  var hours=dow===6?HRS_SAT:HRS_WD;
+  var hours=getHoursFor(editDate);
   var excludeId=editingBooking?editingBooking.id:null;
   var html='';
   hours.forEach(function(h){
@@ -718,7 +760,7 @@ function renderChangeSlots(){
       html+='<div class="time-slot-row full-slot"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div><span class="slot-full">Fully Booked</span></div>';
     }else{
       var label=load>0?'<span class="slot-busy">Available</span>':'<span class="slot-available">✅ Available</span>';
-      html+='<div class="time-slot-row" style="'+sel+'" onclick="pickChangeTime(\''+ts+'\')">' +'<div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div>'+label+'</div>';
+      html+='<div class="time-slot-row" style="'+sel+'" onclick="pickChangeTime(\''+ts+'\')"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div>'+label+'</div>';
     }
   });
   document.getElementById('ch-slots-list').innerHTML=html;
