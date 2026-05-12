@@ -389,6 +389,9 @@ function renderMonth(){
       if(isTM)has=true;
       var cls='month-cell'+(isToday(cd)?' today':'')+(isPast(cd)?' past':'')+(!isTM?' other-month':'')+(closed?' closed':'')+(hol?' holiday':'');
       var inner='<div class="month-day-num">'+cd.getDate()+'</div>';
+      if(isTM&&!isPast(cd)&&closed){
+        inner+='<div style="display:inline-block;background:#fee2e2;color:#991b1b;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Closed</div>';
+      }
       if(hol)inner+='<div class="month-holiday-tag">\ud83c\uddf2\ud83c\uddfe '+hol+'</div>';
       if(isTM&&!closed&&!isPast(cd)){
         if(isDayFullyBooked(ds)){inner+='<div class="booked-tag">Fully Booked</div>';}
