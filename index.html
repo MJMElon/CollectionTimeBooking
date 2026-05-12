@@ -4,14 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MJM Nursery — Collection Booking</title>
+<link rel="preconnect" href="https://kibqjztozokohqmhqqqf.supabase.co" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://api.open-meteo.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  *,*::before,*::after{box-sizing:border-box;}
-  *{font-family:'Outfit',system-ui,sans-serif;}
-  html,body{overflow-x:hidden;max-width:100%;width:100%;}
-  body{background:#f1f5f9;margin:0;min-height:100vh;}
+  *{font-family:'Outfit',system-ui,sans-serif;}body{background:#f1f5f9;margin:0;min-height:100vh;}
   .fade-enter{animation:fadeIn .35s ease-out;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
@@ -51,8 +54,7 @@
   .search-input{background:white;border:2px solid #e2e8f0;color:#1e293b;border-radius:14px;padding:12px 18px;font-size:14px;font-weight:600;outline:none;transition:all .2s;font-family:'Outfit',sans-serif;width:100%;box-sizing:border-box;}
   .search-input:focus{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.1);}
   .search-input::placeholder{color:#94a3b8;}
-  .dash-card{background:white;border-radius:20px;border:1px solid #e2e8f0;box-shadow:0 4px 16px rgba(0,0,0,.06);max-width:100%;}
-  .cal-wrap{width:100%;max-width:100%;overflow:hidden;}
+  .dash-card{background:white;border-radius:20px;border:1px solid #e2e8f0;box-shadow:0 4px 16px rgba(0,0,0,.06);}
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center;padding:16px;}
   .modal-overlay.open{display:flex;}
   .modal-box{background:white;border-radius:24px;width:100%;max-width:520px;max-height:93vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.35);animation:popIn .25s ease both;}
@@ -61,11 +63,9 @@
   .qty-btn.active{border-color:#10b981;background:#10b981;color:white;box-shadow:0 4px 12px rgba(16,185,129,.3);}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#064e3b,#10b981);color:white;padding:14px 22px;border-radius:14px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 8px 24px rgba(16,185,129,.4);text-align:center;max-width:90vw;}
   .toast.show{opacity:1;}
-  .month-grid{display:flex;flex-wrap:wrap;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:white;width:100%;max-width:100%;box-sizing:border-box;}
-  .month-header{flex:0 0 calc(100% / 7);width:calc(100% / 7);box-sizing:border-box;min-width:0;background:#f8fafc;padding:8px 2px;text-align:center;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#64748b;border-bottom:2px solid #e2e8f0;border-right:1px solid #e2e8f0;overflow:hidden;}
-  .month-header:nth-child(7n){border-right:none;}
+  .month-grid{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:white;}
   .month-header:last-child{border-right:none;}
-  .month-cell{flex:0 0 calc(100% / 7);width:calc(100% / 7);box-sizing:border-box;min-width:0;min-height:70px;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9;padding:4px 6px;cursor:pointer;transition:background .15s;overflow:hidden;}
+  .month-cell{min-height:70px;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9;padding:4px 6px;cursor:pointer;transition:background .15s;min-width:0;overflow:hidden;}
   .month-cell:nth-child(7n){border-right:none;}
   .month-cell:hover{background:#f0fdf4;}
   .month-cell.other-month{background:#fafafa;opacity:.35;cursor:default;}.month-cell.other-month:hover{background:#fafafa;}
@@ -73,8 +73,8 @@
   .month-cell.past{opacity:.4;cursor:default;}.month-cell.past:hover{background:transparent;}
   .month-cell.closed{background:#f8f8f8;cursor:default;}.month-cell.closed:hover{background:#f8f8f8;}
   .month-cell.holiday{background:#fef2f2;cursor:default;}.month-cell.holiday:hover{background:#fef2f2;}
-  .month-day-num{font-size:14px;font-weight:900;color:#334155;margin-bottom:2px;}
-  .month-cell.today .month-day-num{color:white;background:#10b981;display:inline-flex;align-items:center;justify-content:center;width:29px;height:29px;border-radius:14px;}
+  .month-day-num{font-size:12px;font-weight:900;color:#334155;margin-bottom:2px;}
+  .month-cell.today .month-day-num{color:white;background:#10b981;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:12px;}
   .month-holiday-tag{display:block;font-size:8px;font-weight:700;color:#dc2626;line-height:1.2;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .booked-tag{display:inline-block;background:#fef3c7;color:#92400e;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;}
   .slot-full{background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;display:inline-block;}
@@ -92,43 +92,26 @@
   .status-cancelled{background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:900;text-transform:uppercase;text-decoration:line-through;}
   .est-box{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:12px 16px;margin-top:8px;}
 
-  /* ── WEATHER STRIP ── */
+  /* ── PURCHASE SEEDLINGS BUTTON ── */
+  .purchase-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#c9a84c,#a08538);color:white;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:13px 20px;border-radius:16px;text-decoration:none;box-shadow:0 4px 12px rgba(201,168,76,.35);transition:transform .15s,box-shadow .15s;width:100%;box-sizing:border-box;}
+  .purchase-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(201,168,76,.5);}
+  .purchase-btn span:first-child{font-size:16px;line-height:1;}
+  /* ── CALENDAR MOBILE FIX ── */
+  .month-header{background:#f8fafc;padding:8px;text-align:center;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#64748b;border-bottom:2px solid #e2e8f0;border-right:1px solid #e2e8f0;min-width:0;}
+  @media(max-width:480px){.month-header{font-size:8px;padding:6px 2px;letter-spacing:0;}.month-cell{min-height:52px;padding:3px 3px;}.month-day-num{font-size:10px;}.month-cell.today .month-day-num{width:20px;height:20px;border-radius:10px;font-size:10px;}.booked-tag,.slot-full,.slot-busy,.slot-available{font-size:7px;padding:1px 3px;}.month-holiday-tag{font-size:7px;}}
+
+  /* ── WEATHER STRIP (matches operations module) ── */
   .weather-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none;}
   .weather-strip::-webkit-scrollbar{display:none;}
-  .weather-day{flex:0 0 auto;min-width:62px;background:white;border:1.5px solid #e2e8f0;border-radius:12px;padding:6px 5px;text-align:center;transition:all .2s;}
+  .weather-day{flex:1 1 0;min-width:74px;background:white;border:1.5px solid #e2e8f0;border-radius:12px;padding:8px 6px;text-align:center;transition:all .2s;}
   .weather-day.today{border-color:#10b981;background:#ecfdf5;}
-  .weather-day-name{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;}
+  .weather-day-name{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;}
   .weather-day.today .weather-day-name{color:#065f46;}
-  .weather-day-icon{font-size:1.2rem;margin:2px 0 1px;line-height:1;}
-  .weather-day-temp{font-size:10px;font-weight:900;color:#1e293b;}
-  .weather-day-rain{font-size:8px;font-weight:700;color:#3b82f6;margin-top:1px;}
+  .weather-day-icon{font-size:1.4rem;margin:3px 0 1px;line-height:1;}
+  .weather-day-temp{font-size:11px;font-weight:900;color:#1e293b;}
+  .weather-day-rain{font-size:9px;font-weight:700;color:#3b82f6;margin-top:1px;}
   .weather-day-rain.high{color:#ef4444;}
-  .weather-day-desc{font-size:7px;font-weight:700;color:#94a3b8;margin-top:1px;line-height:1.2;}
-
-  /* ── PHONE-FRIENDLY ADJUSTMENTS ── */
-  @media(max-width:640px){
-    .mjm-title{font-size:1.5rem;letter-spacing:.1em;}
-    .month-header{padding:5px 0;font-size:9px;letter-spacing:0;}
-    .month-cell{min-height:58px;padding:2px 2px;}
-    .month-day-num{font-size:12px;margin-bottom:1px;line-height:1;}
-    .month-cell.today .month-day-num{width:18px;height:18px;border-radius:9px;font-size:10px;line-height:1;}
-    .month-holiday-tag{font-size:7px;letter-spacing:0;line-height:1.1;}
-    .booked-tag{font-size:7px;padding:0 3px;}
-    .modal-overlay{padding:8px;}
-    .modal-box{border-radius:18px;}
-    .qty-btn{padding:9px 12px;font-size:13px;}
-    .search-input{padding:10px 14px;font-size:13px;}
-  }
-  @media(max-width:430px){
-    .month-cell{min-height:54px;padding:2px 1px;}
-  }
-  @media(max-width:380px){
-    .month-header{font-size:8px;padding:4px 0;}
-    .month-cell{min-height:50px;padding:1px;}
-    .month-day-num{font-size:11px;}
-    .month-cell.today .month-day-num{width:16px;height:16px;border-radius:8px;font-size:9px;}
-    .month-holiday-tag{font-size:6px;}
-  }
+  .weather-day-desc{font-size:8px;font-weight:700;color:#94a3b8;margin-top:1px;line-height:1.2;}
 </style>
 </head>
 <body class="fade-enter">
@@ -139,22 +122,22 @@
   <div class="leaf-trail" id="leaf-trail"></div>
 </div>
 
-<div class="max-w-[800px] mx-auto px-2 sm:px-6 py-4 sm:py-6 space-y-3 sm:space-y-4" style="max-width:100vw;">
+<div class="max-w-[800px] mx-auto px-4 sm:px-6 py-6 space-y-4">
 
   <!-- Weather Forecast -->
   <div class="dash-card p-4" id="weather-card" style="display:none;">
     <div class="flex items-center gap-2 mb-2">
       <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 0 0 4 4h9a5 5 0 1 0-.1-9.999 5.002 5.002 0 1 0-9.78 2.096A4.001 4.001 0 0 0 3 15z"/></svg>
-      <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Miri Weather Forecast</span>
+      <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Miri 7-Day Weather Forecast</span>
     </div>
     <div class="weather-strip" id="weather-strip"></div>
   </div>
 
   <div class="dash-card p-4">
     <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">&#128269; Check My Booked Time Slot</div>
-    <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
-      <input id="search-input" type="text" class="search-input flex-1" placeholder="Enter your Order Number or Name...">
-      <button onclick="searchMyBookings()" class="shrink-0 w-full sm:w-auto px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors">Search</button>
+    <div class="flex gap-3">
+      <input id="search-input" type="text" class="search-input flex-1" placeholder="Order No. or Name…">
+      <button onclick="searchMyBookings()" class="shrink-0 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors">Search</button>
     </div>
   </div>
   <div class="dash-card p-4 flex items-center justify-between">
@@ -162,7 +145,10 @@
     <div class="text-sm font-black text-slate-800 uppercase tracking-wide" id="month-label">&mdash;</div>
     <button onclick="changeMonth(1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-emerald-100 flex items-center justify-center text-slate-500 hover:text-emerald-700 font-black text-lg cursor-pointer transition-colors border-none">&rsaquo;</button>
   </div>
-  <div class="dash-card p-0 overflow-hidden"><div id="month-grid"></div></div>
+  <div class="dash-card p-0 overflow-x-auto"><div id="month-grid"></div></div>
+  <a href="https://ai.mjmnursery.com/salesweb/salesweb_storefront.html" class="purchase-btn dash-card" title="Order more seedlings">
+    <span>🛒</span><span>Purchase Seedlings — Order Now</span>
+  </a>
   <div class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mon&ndash;Fri 8AM&ndash;5PM &bull; Sat 8AM&ndash;12PM &bull; Sun &amp; Holidays Closed</div>
 </div>
 
@@ -175,7 +161,7 @@
     </div>
     <div class="p-5 sm:p-6">
       <div id="my-bk-content"></div>
-      <div class="text-[10px] font-bold text-slate-400 mt-4 text-center leading-relaxed">If you need to change your booked time, please contact our MJM Nursery person in charge.</div>
+      <div class="text-[10px] font-bold text-slate-400 mt-4 text-center leading-relaxed">Click <span class="font-black text-blue-700">Change</span> to reschedule your booking. Need to cancel? Contact MJM Nursery person in charge.</div>
     </div>
     <div class="px-5 sm:px-6 pb-6 flex justify-end border-t border-slate-100 pt-4"><button onclick="closeMyBookings()" class="text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-widest bg-slate-50 px-6 py-3 rounded-full border border-slate-200 cursor-pointer transition-colors">Close</button></div>
   </div>
@@ -192,6 +178,49 @@
       <div class="dash-card overflow-hidden border border-slate-200" id="time-slots-list"></div>
     </div>
     <div class="px-5 sm:px-6 pb-6 flex justify-end border-t border-slate-100 pt-4"><button onclick="closeTimeModal()" class="text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-widest bg-slate-50 px-6 py-3 rounded-full border border-slate-200 cursor-pointer transition-colors">Cancel</button></div>
+  </div>
+</div>
+
+<!-- CHANGE BOOKING MODAL (customer self-edit) -->
+<div class="modal-overlay" id="change-modal" style="z-index:240;">
+  <div class="modal-box">
+    <div style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);" class="px-6 pt-4 pb-6 rounded-t-[24px]">
+      <div class="flex justify-between items-center mb-3">
+        <div class="text-[10px] font-black text-blue-200 uppercase tracking-widest">&#128257; Change Booking</div>
+        <button onclick="closeChangeBooking()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black text-lg flex items-center justify-center transition-colors shrink-0">&times;</button>
+      </div>
+      <div class="text-sm font-bold text-white" id="ch-current-label">&mdash;</div>
+    </div>
+    <div class="p-5 sm:p-6 space-y-4">
+      <div>
+        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">New Date</label>
+        <input id="ch-date" type="date" class="search-input text-sm" style="padding:10px 14px;" onchange="onChangeDateChange()">
+        <div id="ch-date-warn" class="hidden text-[10px] font-bold text-red-500 mt-2"></div>
+      </div>
+      <div>
+        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">New Time Slot</label>
+        <div class="dash-card overflow-hidden border border-slate-200" id="ch-slots-list" style="max-height:200px;overflow-y:auto;">
+          <div class="text-[10px] font-bold text-slate-300 px-4 py-3">Pick a date first…</div>
+        </div>
+        <div id="ch-time-label" class="hidden text-[10px] font-bold text-blue-700 mt-2"></div>
+      </div>
+      <div>
+        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Collection Quantity (Seedlings) *</div>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <button class="qty-btn ch-qty-btn" onclick="pickChangeQty(50)">+50</button>
+          <button class="qty-btn ch-qty-btn" onclick="pickChangeQty(100)">+100</button>
+          <button class="qty-btn ch-qty-btn" onclick="pickChangeQty(500)">+500</button>
+          <button class="qty-btn ch-qty-btn" onclick="pickChangeQty(1000)">+1,000</button>
+          <input id="ch-custom-qty" type="number" min="1" class="search-input text-sm" style="padding:10px 14px;width:160px;" placeholder="Other quantity" oninput="pickChangeCustomQty()">
+        </div>
+        <div id="ch-qty-label" class="text-sm font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 hidden">Quantity: <span id="ch-qty-value">0</span> seedlings</div>
+        <div id="ch-overflow-warn" class="hidden text-[10px] font-bold text-red-500 mt-2"></div>
+      </div>
+    </div>
+    <div class="px-5 sm:px-6 pb-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
+      <button onclick="closeChangeBooking()" class="text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-widest bg-slate-50 px-6 py-3 rounded-full border border-slate-200 cursor-pointer transition-colors">Cancel</button>
+      <button id="ch-submit" onclick="saveChangeBooking()" disabled class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-[11px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors">Save Changes</button>
+    </div>
   </div>
 </div>
 
@@ -248,6 +277,10 @@
       We look forward to seeing you!<br>
       Please arrive on time for a smooth collection.
     </div>
+    <button onclick="shareWhatsApp()" class="w-full py-3 mb-2 bg-[#25D366] hover:bg-[#1faa54] text-white font-black text-[11px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors flex items-center justify-center gap-2">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.85 9.85 0 0 0 1.51 5.26L4.41 19.158l3.41-.965zm5.392-3.21c-.741.001-1.452-.213-2.072-.595-1.137-.711-2.143-1.626-2.842-2.778-.704-1.158-1.067-2.398-1.066-3.617 0-1.013.413-1.95 1.07-2.541.305-.273.717-.43 1.142-.43.13 0 .264.005.39.027.226.04.404.182.498.402.255.59.624 1.65.66 1.755.05.157.085.343-.014.546-.099.203-.204.317-.355.491-.151.174-.317.388-.452.522-.135.135-.275.281-.118.55.157.27.7 1.156 1.502 1.872.928.825 1.708 1.083 1.99 1.213.282.13.448.108.612-.066.165-.174.71-.831.9-1.116.19-.286.38-.236.642-.142.262.094 1.668.787 1.954.93.286.142.476.213.547.331.071.118.071.687-.187 1.348-.258.661-1.488 1.27-2.038 1.32-.55.05-.55.394-3.464-.66z"/></svg>
+      Share booking via WhatsApp
+    </button>
     <button onclick="closeSuccessModal()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors">OK</button>
   </div>
 </div>
@@ -262,24 +295,61 @@ var _supabase=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 var RATE=350;var MAX_LOAD=600;
 var currentMonth=new Date().getMonth();var currentYear=new Date().getFullYear();
 var monthBookings=[];var selectedDate=null;var selectedTime=null;var selectedQty=0;
+var searchedBookings=[];var editingBooking=null;var editDate=null;var editTime=null;var editQty=0;
 
 var MNAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
 var HRS_WD=[8,9,10,11,12,13,14,15,16];var HRS_SAT=[8,9,10,11];
 var HOLIDAYS={'2026-01-01':'New Year','2026-01-14':'Nuzul Al-Quran','2026-01-29':'Thaipusam','2026-02-01':'FT Day','2026-02-17':'CNY','2026-02-18':'CNY','2026-03-28':'Hari Raya Aidilfitri','2026-03-29':'Hari Raya Aidilfitri','2026-05-01':'Labour Day','2026-05-11':'Vesak Day','2026-06-01':'Agong Birthday','2026-06-04':'Hari Raya Haji','2026-06-05':'Hari Raya Haji','2026-06-25':'Awal Muharram','2026-08-31':'Merdeka Day','2026-09-03':'Maulidur Rasul','2026-09-16':'Malaysia Day','2026-10-20':'Deepavali','2026-12-25':'Christmas'};
+var DATE_OVERRIDES={};
+
+async function loadDateOverrides(){
+  try{
+    var {data}=await _supabase.from('shared_date_overrides').select('*');
+    DATE_OVERRIDES={};
+    (data||[]).forEach(function(o){DATE_OVERRIDES[o.date_str]=o;});
+  }catch(e){console.error('loadDateOverrides:',e);}
+}
 
 function fmtDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function isToday(d){var t=new Date();return d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()&&d.getDate()===t.getDate();}
 function isPast(d){var t=new Date();t.setHours(0,0,0,0);var c=new Date(d);c.setHours(0,0,0,0);return c<t;}
 function fmtHr(h){if(h<12)return h+' AM';if(h===12)return '12 PM';return(h-12)+' PM';}
-function slotLbl(h){return fmtHr(h)+' \u2013 '+fmtHr(h+1);}
+function slotLbl(h){return fmtHr(h)+' – '+fmtHr(h+1);}
 function hrsNeeded(q){return Math.ceil(q/RATE);}
 function hrLoad(q){return q/hrsNeeded(q);}
-function closing(ds){return new Date(ds+'T00:00:00').getDay()===6?12:17;}
 function isHoliday(ds){return !!HOLIDAYS[ds];}
 
-function getHourLoad(ds,h){
+// Override-aware: returns true if this date is closed (no booking allowed)
+function isDateClosed(ds){
+  var ovr=DATE_OVERRIDES[ds];
+  if(ovr) return !ovr.is_open;
+  var d=new Date(ds+'T00:00:00');
+  return d.getDay()===0||!!HOLIDAYS[ds];
+}
+
+// Override-aware: returns array of bookable hours for this date
+function getHoursFor(ds){
+  var ovr=DATE_OVERRIDES[ds];
+  if(ovr){
+    if(!ovr.is_open) return [];
+    var arr=[];for(var h=ovr.open_hour;h<ovr.close_hour;h++) arr.push(h);
+    return arr;
+  }
+  var d=new Date(ds+'T00:00:00'),dow=d.getDay();
+  if(dow===0||HOLIDAYS[ds]) return [];
+  return dow===6?HRS_SAT:HRS_WD;
+}
+
+function closing(ds){
+  var ovr=DATE_OVERRIDES[ds];
+  if(ovr&&ovr.is_open&&ovr.close_hour) return ovr.close_hour;
+  return new Date(ds+'T00:00:00').getDay()===6?12:17;
+}
+
+function getHourLoad(ds,h,excludeId){
   var total=0;
   monthBookings.forEach(function(b){
+    if(excludeId&&b.id===excludeId)return;
     if((b.booking_date||'').substring(0,10)!==ds||b.status==='cancelled')return;
     var s=parseInt((b.start_time||'00').split(':')[0]),e=parseInt((b.end_time||'00').split(':')[0]);
     if(e<=s)e=s+1;
@@ -287,37 +357,36 @@ function getHourLoad(ds,h){
   });
   return total;
 }
-function remaining(ds,h){return Math.max(0,MAX_LOAD-getHourLoad(ds,h));}
+function remaining(ds,h,excludeId){return Math.max(0,MAX_LOAD-getHourLoad(ds,h,excludeId));}
 
-// Calculate the max qty bookable starting at startH
-function maxBookableQty(ds,startH){
+// Calculate the max qty bookable starting at startH (excludeId optional)
+function maxBookableQty(ds,startH,excludeId){
   var cl=closing(ds);
-  // Try increasing qty until canFit fails
   var best=0;
   for(var tryQty=50;tryQty<=5000;tryQty+=50){
     var hrs=hrsNeeded(tryQty),endH=startH+hrs;
     if(endH>cl)break;
     var ld=hrLoad(tryQty),ok=true;
-    for(var h=startH;h<endH;h++){if(getHourLoad(ds,h)+ld>MAX_LOAD){ok=false;break;}}
+    for(var h=startH;h<endH;h++){if(getHourLoad(ds,h,excludeId)+ld>MAX_LOAD){ok=false;break;}}
     if(ok)best=tryQty;else break;
   }
   return best;
 }
 
-function canFit(ds,startH,qty){
+function canFit(ds,startH,qty,excludeId){
   var hrs=hrsNeeded(qty),endH=startH+hrs,cl=closing(ds);
   if(endH>cl)return false;
   var ld=hrLoad(qty);
-  for(var h=startH;h<endH;h++){if(getHourLoad(ds,h)+ld>MAX_LOAD)return false;}
+  for(var h=startH;h<endH;h++){if(getHourLoad(ds,h,excludeId)+ld>MAX_LOAD)return false;}
   return true;
 }
 function dayBusyHrs(ds){
-  var hours=new Date(ds+'T00:00:00').getDay()===6?HRS_SAT:HRS_WD;
+  var hours=getHoursFor(ds);
   var c=0;hours.forEach(function(h){if(getHourLoad(ds,h)>0)c++;});return c;
 }
 function isDayFullyBooked(ds){
-  var d=new Date(ds+'T00:00:00'),dow=d.getDay();
-  var hours=dow===6?HRS_SAT:HRS_WD;
+  var hours=getHoursFor(ds);
+  if(!hours.length) return false;
   for(var i=0;i<hours.length;i++){if(maxBookableQty(ds,hours[i])>0)return false;}
   return true;
 }
@@ -328,39 +397,39 @@ function dayHasBookings(ds){
 // ═══════════════ LOAD ═══════════════
 async function loadMonth(){
   var f=new Date(currentYear,currentMonth,1),l=new Date(currentYear,currentMonth+1,0);
-  var {data}=await _supabase.from('shared_collection_bookings').select('booking_date,start_time,end_time,status,collection_qty').gte('booking_date',fmtDate(f)).lte('booking_date',fmtDate(l)).neq('status','cancelled');
-  monthBookings=data||[];
+  var results=await Promise.all([
+    _supabase.from('shared_collection_bookings').select('id,booking_date,start_time,end_time,status,collection_qty').gte('booking_date',fmtDate(f)).lte('booking_date',fmtDate(l)).neq('status','cancelled'),
+    loadDateOverrides()
+  ]);
+  monthBookings=(results[0]&&results[0].data)||[];
 }
-window.addEventListener('DOMContentLoaded',function(){loadMonth().then(function(){renderMonth();loadWeather();});});
+window.addEventListener('DOMContentLoaded',function(){
+  // Render calendar shell immediately so the user sees something instantly,
+  // then load bookings + overrides in the background and re-render once they arrive.
+  renderMonth();
+  Promise.all([loadMonth(),loadDateOverrides()]).then(function(){renderMonth();});
+  loadWeather();
+});
 
 // ═══════════════ SEARCH ═══════════════
-// Lookup is order-number-exact via the find_my_bookings SECURITY DEFINER RPC.
-// Wildcard search was removed \u2014 it let any visitor enumerate every customer's
-// name + order numbers with a 2-char query, plus opened a PostgREST filter
-// injection vector via `,`.
-function _bkEsc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 async function searchMyBookings(){
-  var raw=document.getElementById('search-input').value;
-  // Strip anything that could break out of a PostgREST filter or HTML.
-  var q=String(raw||'').replace(/[%,*'"\\<>]/g,'').trim();
-  if(q.length<4){showToast('Please enter your full order number (at least 4 characters)');return;}
-
-  var rpc=await _supabase.rpc('find_my_bookings',{_order_number:q,_customer_name:null});
-  if(rpc.error){showToast('Lookup failed: '+rpc.error.message);return;}
-  var data=rpc.data||[];
+  var q=document.getElementById('search-input').value.trim();
+  if(q.length<2){showToast('Please enter at least 2 characters');return;}
   var todayStr=fmtDate(new Date());
-  data=data.filter(function(b){return(b.booking_date||'')>=todayStr;});
-
+  var {data}=await _supabase.from('shared_collection_bookings').select('id,booking_date,start_time,end_time,customer_name,order_number,collection_qty,status,notes').or('order_number.ilike.%'+q+'%,customer_name.ilike.%'+q+'%').gte('booking_date',todayStr).order('booking_date',{ascending:true}).order('start_time',{ascending:true}).limit(20);
+  searchedBookings=data||[];
   var el=document.getElementById('my-bk-content');
-  if(!data.length){
-    el.innerHTML='<div class="text-center py-8"><div class="text-3xl mb-2">\ud83d\udccb</div><div class="text-[11px] font-black text-slate-300 uppercase tracking-widest">No bookings found for that order number</div></div>';
+  if(!data||!data.length){
+    el.innerHTML='<div class="text-center py-8"><div class="text-3xl mb-2">📋</div><div class="text-[11px] font-black text-slate-300 uppercase tracking-widest">No bookings found</div></div>';
   } else {
     document.getElementById('my-bk-title').textContent=data[0].customer_name||q;
-    var html='<div class="rounded-2xl border border-slate-200 overflow-hidden overflow-x-auto"><table class="my-bk-table"><thead><tr><th>Date</th><th>Time</th><th>Quantity</th><th>Duration</th><th>Status</th></tr></thead><tbody>';
+    var html='<div class="rounded-2xl border border-slate-200 overflow-hidden overflow-x-auto"><table class="my-bk-table"><thead><tr><th>Date</th><th>Time</th><th>Quantity</th><th>Duration</th><th>Status</th><th></th></tr></thead><tbody>';
     data.forEach(function(b){
-      var dt=b.booking_date?new Date(b.booking_date+'T00:00:00').toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric',weekday:'short'}):'\u2014';
+      var dt=b.booking_date?new Date(b.booking_date+'T00:00:00').toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric',weekday:'short'}):'—';
       var sH=parseInt((b.start_time||'08').split(':')[0]),eH=parseInt((b.end_time||'09').split(':')[0]);
-      html+='<tr><td>'+_bkEsc(dt)+'</td><td>'+_bkEsc(fmtHr(sH))+' \u2013 '+_bkEsc(fmtHr(eH))+'</td><td class="font-black text-emerald-700">'+(parseInt(b.collection_qty)||0).toLocaleString()+'</td><td>'+(eH-sH)+' hr</td><td><span class="'+(b.status==='cancelled'?'status-cancelled':b.status==='pending'?'status-pending':'status-booked')+'">'+(b.status==='cancelled'?'Cancelled':b.status==='pending'?'Pending':'Confirmed Appointment')+'</span></td></tr>';
+      var canEdit=b.status!=='cancelled';
+      var changeBtn=canEdit?'<button onclick="openChangeBooking(\''+b.id+'\')" class="text-[9px] font-black text-blue-700 hover:text-white hover:bg-blue-700 uppercase tracking-widest bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 cursor-pointer transition-colors">Change</button>':'';
+      html+='<tr><td>'+dt+'</td><td>'+fmtHr(sH)+' – '+fmtHr(eH)+'</td><td class="font-black text-emerald-700">'+(b.collection_qty||0).toLocaleString()+'</td><td>'+(eH-sH)+' hr</td><td><span class="'+(b.status==='cancelled'?'status-cancelled':b.status==='pending'?'status-pending':'status-booked')+'">'+(b.status==='cancelled'?'Cancelled':b.status==='pending'?'Pending':'Confirmed Appointment')+'</span></td><td>'+changeBtn+'</td></tr>';
     });
     html+='</tbody></table></div>';el.innerHTML=html;
   }
@@ -370,29 +439,29 @@ function closeMyBookings(){document.getElementById('my-bookings-modal').classLis
 document.getElementById('search-input').addEventListener('keydown',function(e){if(e.key==='Enter')searchMyBookings();});
 
 // ═══════════════ MONTH ═══════════════
-function changeMonth(dir){currentMonth+=dir;if(currentMonth>11){currentMonth=0;currentYear++;}if(currentMonth<0){currentMonth=11;currentYear--;}loadMonth().then(function(){renderMonth();loadWeather();});}
+function changeMonth(dir){currentMonth+=dir;if(currentMonth>11){currentMonth=0;currentYear++;}if(currentMonth<0){currentMonth=11;currentYear--;}loadMonth().then(function(){renderMonth();});}
 
 function renderMonth(){
   document.getElementById('month-label').textContent=MNAMES[currentMonth]+' '+currentYear;
   var el=document.getElementById('month-grid'),firstDay=new Date(currentYear,currentMonth,1);
   var startDow=firstDay.getDay();if(startDow===0)startDow=7;
-  var narrow=window.innerWidth<=380;
-  var dayNames=narrow?['M','T','W','T','F','S','S']:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   var html='<div class="month-grid">';
-  dayNames.forEach(function(d){html+='<div class="month-header">'+d+'</div>';});
+  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function(d){html+='<div class="month-header">'+d+'</div>';});
   var cd=new Date(firstDay);cd.setDate(cd.getDate()-(startDow-1));
   for(var r=0;r<6;r++){
     var has=false;
     for(var c=0;c<7;c++){
       var isTM=cd.getMonth()===currentMonth,ds=fmtDate(cd),dow=cd.getDay();
-      var isSun=dow===0,hol=HOLIDAYS[ds],closed=isSun||!!hol;
+      var hol=HOLIDAYS[ds],closed=isDateClosed(ds);
+      var ovr=DATE_OVERRIDES[ds];
+      var showHoliday=hol&&!(ovr&&ovr.is_open); // hide holiday tag if overridden open
       if(isTM)has=true;
-      var cls='month-cell'+(isToday(cd)?' today':'')+(isPast(cd)?' past':'')+(!isTM?' other-month':'')+(closed?' closed':'')+(hol?' holiday':'');
+      var cls='month-cell'+(isToday(cd)?' today':'')+(isPast(cd)?' past':'')+(!isTM?' other-month':'')+(closed?' closed':'')+(showHoliday?' holiday':'');
       var inner='<div class="month-day-num">'+cd.getDate()+'</div>';
       if(isTM&&!isPast(cd)&&closed){
         inner+='<div style="display:inline-block;background:#fee2e2;color:#991b1b;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Closed</div>';
       }
-      if(hol)inner+='<div class="month-holiday-tag">\ud83c\uddf2\ud83c\uddfe '+hol+'</div>';
+      if(showHoliday)inner+='<div class="month-holiday-tag">🇲🇾 '+hol+'</div>';
       if(isTM&&!closed&&!isPast(cd)){
         if(isDayFullyBooked(ds)){inner+='<div class="booked-tag">Fully Booked</div>';}
         else{inner+='<div style="display:inline-block;background:#d1fae5;color:#065f46;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Open</div>';}
@@ -413,7 +482,7 @@ function openTimeModal(ds){
   var d=new Date(ds+'T00:00:00');
   var dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   document.getElementById('tm-date-label').textContent=dn[d.getDay()]+', '+d.toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'});
-  var dow=d.getDay(),hours=dow===6?HRS_SAT:HRS_WD;
+  var hours=getHoursFor(ds);
 
   var html='';
   hours.forEach(function(h){
@@ -424,9 +493,9 @@ function openTimeModal(ds){
       html+='<div class="time-slot-row full-slot"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div><span class="slot-full">Fully Booked</span></div>';
     } else if(load>0){
       var bkCount=monthBookings.filter(function(b){var s=parseInt((b.start_time||'00').split(':')[0]),e=parseInt((b.end_time||'00').split(':')[0]);if(e<=s)e=s+1;return(b.booking_date||'').substring(0,10)===ds&&h>=s&&h<e&&b.status!=='cancelled';}).length;
-      html+='<div class="time-slot-row" onclick="pickTime(\''+ts+'\','+maxQty+')"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div><span class="slot-busy">'+bkCount+' booked \u2022 Available</span></div>';
+      html+='<div class="time-slot-row" onclick="pickTime(\''+ts+'\','+maxQty+')"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div><span class="slot-busy">'+bkCount+' booked • Available</span></div>';
     } else {
-      html+='<div class="time-slot-row" onclick="pickTime(\''+ts+'\','+maxQty+')"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div><span class="slot-available">\u2705 Available</span></div>';
+      html+='<div class="time-slot-row" onclick="pickTime(\''+ts+'\','+maxQty+')"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div><span class="slot-available">✅ Available</span></div>';
     }
   });
   document.getElementById('time-slots-list').innerHTML=html;
@@ -444,7 +513,7 @@ function pickTime(ts,cap){
   var d=new Date(selectedDate+'T00:00:00');
   var dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   document.getElementById('bk-slot-label').textContent=dn[d.getDay()]+', '+d.toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'})+' at '+fmtHr(startH);
-  document.getElementById('bk-capacity-label').textContent='\ud83c\udf31 Max collection at selected time: '+Math.round(slotCapacity).toLocaleString()+' seedlings';
+  document.getElementById('bk-capacity-label').textContent='🌱 Max collection at selected time: '+Math.round(slotCapacity).toLocaleString()+' seedlings';
 
   document.getElementById('bk-identity').value='';
   document.getElementById('identity-status').classList.add('hidden');
@@ -490,10 +559,10 @@ function updateEst(){
     '<div class="text-xs font-bold text-blue-600 mt-1">'+fmtHr(startH)+' to '+fmtHr(endH)+'</div>'+
     '<div class="text-[10px] font-bold text-slate-400 mt-1">Your selected quantity of '+selectedQty.toLocaleString()+' seedlings will take approximately '+hrs+' hour'+(hrs>1?'s':'')+' to prepare and load.</div></div>';
 
-  if(endH>cl){warn.classList.remove('hidden');warn.textContent='\u26a0\ufe0f Exceeds closing time ('+fmtHr(cl)+'). Reduce quantity or pick an earlier slot.';return;}
+  if(endH>cl){warn.classList.remove('hidden');warn.textContent='⚠️ Exceeds closing time ('+fmtHr(cl)+'). Reduce quantity or pick an earlier slot.';return;}
   if(!canFit(selectedDate,startH,selectedQty)){
     warn.classList.remove('hidden');
-    warn.textContent='\u26a0\ufe0f Choose quantity '+slotCapacity.toLocaleString()+' or below, or select another time slot.';
+    warn.textContent='⚠️ Choose quantity '+slotCapacity.toLocaleString()+' or below, or select another time slot.';
   } else{warn.classList.add('hidden');}
 }
 
@@ -517,29 +586,24 @@ function validateIdentity(){
     // Must validate against database — block booking if invalid
     status.classList.remove('hidden');
     status.className='text-[10px] font-bold mt-2 text-slate-400';
-    status.textContent='Verifying order number\u2026';
+    status.textContent='Verifying order number…';
     identityChecking=true;
     checkReady();
 
     identityTimer=setTimeout(async function(){
-      // Sanitise — PostgREST .or() interpolates raw, so a `,` would let the
-      // user inject extra filter clauses against other columns.
-      var safeVal=String(val||'').replace(/[%,*'"\\<>]/g,'');
       var {data}=await _supabase.from('shared_al_orders')
-        .select('al_number,customer_name,order_number,status,balance_quantity')
-        .or('order_number.ilike.%'+safeVal+'%,al_number.ilike.%'+safeVal+'%')
-        .not('status','in','("Cancelled","Collected")')
-        .gt('balance_quantity',0)
+        .select('al_number,customer_name,order_number')
+        .or('order_number.ilike.%'+val+'%,al_number.ilike.%'+val+'%')
         .limit(1);
 
       identityChecking=false;
       if(data&&data.length>0){
         status.className='text-[10px] font-bold mt-2 text-emerald-700';
-        status.textContent='\u2705 Order number verified';
+        status.textContent='✅ Order number verified';
         identityValid=true;
       } else {
         status.className='text-[10px] font-bold mt-2 text-red-500';
-        status.textContent='\u274c Order not found or already collected. Please check your order number or use your company name instead.';
+        status.textContent='❌ Invalid order number. Please check and enter the correct order number or use your company name instead.';
         identityValid=false;
       }
       checkReady();
@@ -549,7 +613,7 @@ function validateIdentity(){
     if(val.length>=3){
       status.classList.remove('hidden');
       status.className='text-[10px] font-bold mt-2 text-emerald-600';
-      status.textContent='\u2705 Booking under: '+val;
+      status.textContent='✅ Booking under: '+val;
       identityValid=true;
     } else {
       status.classList.add('hidden');
@@ -566,16 +630,16 @@ function checkReady(){
 
 // ═══════════════ SUBMIT ═══════════════
 async function submitBooking(){
-  var btn=document.getElementById('bk-submit');btn.disabled=true;btn.textContent='Submitting\u2026';
+  var btn=document.getElementById('bk-submit');btn.disabled=true;btn.textContent='Submitting…';
   var identity=document.getElementById('bk-identity').value.trim();
   var remark=document.getElementById('bk-remark').value.trim();
   var startH=parseInt(selectedTime.split(':')[0]),hrs=hrsNeeded(selectedQty),endH=startH+hrs;
   var payload={booking_date:selectedDate,start_time:selectedTime,end_time:String(endH).padStart(2,'0')+':00',al_number:'PENDING',customer_name:identity,order_number:identity,collection_qty:selectedQty,status:'pending',notes:remark||'Customer self-booking ('+hrs+' hr)'};
   var {error}=await _supabase.from('shared_collection_bookings').insert([payload]);
-  if(error){showToast('\u274c '+error.message);btn.disabled=false;btn.textContent='\ud83d\udcc5 Confirm Booking';return;}
-  btn.textContent='\ud83d\udcc5 Confirm Booking';closeBookingModal();
+  if(error){showToast('❌ '+error.message);btn.disabled=false;btn.textContent='📅 Confirm Booking';return;}
+  btn.textContent='📅 Confirm Booking';closeBookingModal();
   var d=new Date(selectedDate+'T00:00:00');
-  document.getElementById('success-detail').textContent=d.toLocaleDateString('en-MY',{weekday:'long',day:'2-digit',month:'short',year:'numeric'})+' \u2014 '+fmtHr(startH)+' to '+fmtHr(endH)+' ('+hrs+' hr) \u2014 '+selectedQty.toLocaleString()+' seedlings';
+  document.getElementById('success-detail').textContent=d.toLocaleDateString('en-MY',{weekday:'long',day:'2-digit',month:'short',year:'numeric'})+' — '+fmtHr(startH)+' to '+fmtHr(endH)+' ('+hrs+' hr) — '+selectedQty.toLocaleString()+' seedlings';
   document.getElementById('success-modal').classList.add('open');
   await loadMonth();renderMonth();
 }
@@ -586,7 +650,7 @@ function showToast(msg){var t=document.getElementById('toast');t.textContent=msg
 (function(){
   var trail=document.getElementById('leaf-trail');
   if(!trail)return;
-  var leaves=['\ud83c\udf3f','\ud83c\udf31','\ud83c\udf43'];
+  var leaves=['🌿','🌱','🍃'];
   for(var i=0;i<3;i++){var l=document.createElement('div');l.className='floating-leaf';l.textContent=leaves[i];trail.appendChild(l);}
 })();
 
@@ -623,48 +687,185 @@ function scheduleFirecracker(){
 scheduleFirecracker();
 
 // ════════════════════════════════════════════════════════
-//  WEATHER FORECAST (Open-Meteo — Miri, syncs with month)
+//  CHANGE BOOKING (customer self-edit)
+// ════════════════════════════════════════════════════════
+function openChangeBooking(id){
+  var b=searchedBookings.find(function(x){return x.id===id;});
+  if(!b)return;
+  editingBooking=b;
+  editDate=b.booking_date.substring(0,10);
+  editTime=b.start_time.substring(0,5);
+  editQty=b.collection_qty||0;
+
+  var d=new Date(editDate+'T00:00:00');
+  var sH=parseInt(editTime.split(':')[0]),eH=parseInt((b.end_time||'00').split(':')[0]);
+  document.getElementById('ch-current-label').textContent='Current: '+d.toLocaleDateString('en-MY',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+' — '+fmtHr(sH)+' to '+fmtHr(eH)+' ('+(b.collection_qty||0).toLocaleString()+' seedlings)';
+
+  document.getElementById('ch-date').value=editDate;
+  document.getElementById('ch-date').min=fmtDate(new Date());
+  document.getElementById('ch-date-warn').classList.add('hidden');
+  document.getElementById('ch-custom-qty').value='';
+  document.getElementById('ch-qty-value').textContent=editQty.toLocaleString();
+  document.getElementById('ch-qty-label').classList.remove('hidden');
+  document.getElementById('ch-overflow-warn').classList.add('hidden');
+  document.querySelectorAll('.ch-qty-btn').forEach(function(btn){
+    var v=parseInt(btn.textContent.replace(/[^0-9]/g,''));
+    btn.classList.toggle('active',v===editQty);
+  });
+
+  // Make sure month for editDate is loaded so capacity calc is correct
+  loadMonth().then(function(){renderChangeSlots();updateChangeReady();});
+  document.getElementById('change-modal').classList.add('open');
+}
+function closeChangeBooking(){
+  document.getElementById('change-modal').classList.remove('open');
+  editingBooking=null;
+}
+
+function onChangeDateChange(){
+  var v=document.getElementById('ch-date').value;
+  if(!v){return;}
+  var d=new Date(v+'T00:00:00');
+  var warn=document.getElementById('ch-date-warn');
+  if(isPast(d)){warn.classList.remove('hidden');warn.textContent='⚠️ Cannot pick a past date.';return;}
+  if(isDateClosed(v)){
+    var ovr=DATE_OVERRIDES[v];
+    var reason=ovr?'manually closed':(d.getDay()===0?'Sunday is closed':(HOLIDAYS[v]+' (Public Holiday — closed)'));
+    warn.classList.remove('hidden');warn.textContent='⚠️ '+reason+'.';return;
+  }
+  warn.classList.add('hidden');
+  editDate=v;
+  // Reload monthBookings if user picked a different month
+  var nm=d.getMonth(),ny=d.getFullYear();
+  if(nm!==currentMonth||ny!==currentYear){
+    var savedM=currentMonth,savedY=currentYear;
+    currentMonth=nm;currentYear=ny;
+    loadMonth().then(function(){
+      currentMonth=savedM;currentYear=savedY;
+      renderChangeSlots();updateChangeReady();
+    });
+  }else{
+    renderChangeSlots();updateChangeReady();
+  }
+}
+
+function renderChangeSlots(){
+  if(!editDate)return;
+  var hours=getHoursFor(editDate);
+  var excludeId=editingBooking?editingBooking.id:null;
+  var html='';
+  hours.forEach(function(h){
+    var ts=String(h).padStart(2,'0')+':00';
+    var maxQty=maxBookableQty(editDate,h,excludeId);
+    var load=getHourLoad(editDate,h,excludeId);
+    var sel=(ts===editTime)?'background:#dbeafe;border-left:4px solid #1d4ed8;':'';
+    if(load>=MAX_LOAD||maxQty<=0){
+      html+='<div class="time-slot-row full-slot"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div><span class="slot-full">Fully Booked</span></div>';
+    }else{
+      var label=load>0?'<span class="slot-busy">Available</span>':'<span class="slot-available">✅ Available</span>';
+      html+='<div class="time-slot-row" style="'+sel+'" onclick="pickChangeTime(\''+ts+'\')"><div class="text-sm font-black text-slate-700">'+slotLbl(h)+'</div>'+label+'</div>';
+    }
+  });
+  document.getElementById('ch-slots-list').innerHTML=html;
+  if(editTime){
+    var sH=parseInt(editTime.split(':')[0]);
+    document.getElementById('ch-time-label').classList.remove('hidden');
+    document.getElementById('ch-time-label').textContent='Selected: '+fmtHr(sH);
+  }
+}
+
+function pickChangeTime(ts){editTime=ts;renderChangeSlots();updateChangeReady();}
+
+function pickChangeQty(q){
+  editQty=q;document.getElementById('ch-custom-qty').value='';
+  document.querySelectorAll('.ch-qty-btn').forEach(function(b){var v=parseInt(b.textContent.replace(/[^0-9]/g,''));b.classList.toggle('active',v===q);});
+  document.getElementById('ch-qty-value').textContent=q.toLocaleString();
+  document.getElementById('ch-qty-label').classList.remove('hidden');
+  updateChangeReady();
+}
+function pickChangeCustomQty(){
+  var v=parseInt(document.getElementById('ch-custom-qty').value)||0;
+  document.querySelectorAll('.ch-qty-btn').forEach(function(b){b.classList.remove('active');});
+  if(v>0){editQty=v;document.getElementById('ch-qty-value').textContent=v.toLocaleString();document.getElementById('ch-qty-label').classList.remove('hidden');}
+  else{editQty=0;document.getElementById('ch-qty-label').classList.add('hidden');}
+  updateChangeReady();
+}
+
+function updateChangeReady(){
+  var btn=document.getElementById('ch-submit'),warn=document.getElementById('ch-overflow-warn');
+  if(!editDate||!editTime||editQty<=0){btn.disabled=true;warn.classList.add('hidden');return;}
+  var startH=parseInt(editTime.split(':')[0]),excludeId=editingBooking?editingBooking.id:null;
+  var fits=canFit(editDate,startH,editQty,excludeId);
+  if(!fits){
+    var cap=maxBookableQty(editDate,startH,excludeId);
+    warn.classList.remove('hidden');
+    warn.textContent='⚠️ Slot can fit at most '+cap.toLocaleString()+' seedlings starting at '+fmtHr(startH)+'. Reduce qty or pick another slot.';
+    btn.disabled=true;
+  }else{warn.classList.add('hidden');btn.disabled=false;}
+}
+
+async function saveChangeBooking(){
+  if(!editingBooking)return;
+  var btn=document.getElementById('ch-submit');btn.disabled=true;btn.textContent='Saving…';
+  var startH=parseInt(editTime.split(':')[0]),hrs=hrsNeeded(editQty),endH=startH+hrs;
+  var updates={booking_date:editDate,start_time:editTime,end_time:String(endH).padStart(2,'0')+':00',collection_qty:editQty};
+  var {error}=await _supabase.from('shared_collection_bookings').update(updates).eq('id',editingBooking.id);
+  if(error){showToast('❌ '+error.message);btn.disabled=false;btn.textContent='Save Changes';return;}
+  btn.textContent='Save Changes';
+  closeChangeBooking();
+  showToast('✅ Booking updated');
+  await loadMonth();renderMonth();
+  // Refresh search results
+  searchMyBookings();
+}
+
+// ════════════════════════════════════════════════════════
+//  WHATSAPP SHARE
+// ════════════════════════════════════════════════════════
+function shareWhatsApp(){
+  var ds=selectedDate,sH=parseInt(selectedTime.split(':')[0]),hrs=hrsNeeded(selectedQty),eH=sH+hrs;
+  var d=new Date(ds+'T00:00:00');
+  var dateStr=d.toLocaleDateString('en-MY',{weekday:'long',day:'2-digit',month:'short',year:'numeric'});
+  var msg='🌱 MJM Nursery Collection Booking\n\n'+
+    '📅 Date: '+dateStr+'\n'+
+    '⏰ Time: '+fmtHr(sH)+' – '+fmtHr(eH)+' ('+hrs+' hr)\n'+
+    '🌿 Quantity: '+selectedQty.toLocaleString()+' seedlings\n\n'+
+    'Please arrive on time for a smooth collection. Thank you!';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+// ════════════════════════════════════════════════════════
+//  WEATHER FORECAST (Open-Meteo — Miri, fixed 7-day window)
 // ════════════════════════════════════════════════════════
 var _wCache={};
 var _wCodes={0:'Clear',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Foggy',48:'Fog',51:'Lt Drizzle',53:'Drizzle',55:'Hvy Drizzle',61:'Lt Rain',63:'Rain',65:'Hvy Rain',80:'Lt Showers',81:'Showers',82:'Hvy Showers',95:'T-Storm',96:'T-Storm+Hail',99:'Hvy T-Storm'};
-var _wIcons={0:'\u2600\uFE0F',1:'\uD83C\uDF24\uFE0F',2:'\u26C5',3:'\u2601\uFE0F',45:'\uD83C\uDF2B\uFE0F',48:'\uD83C\uDF2B\uFE0F',51:'\uD83C\uDF26\uFE0F',53:'\uD83C\uDF27\uFE0F',55:'\uD83C\uDF27\uFE0F',61:'\uD83C\uDF26\uFE0F',63:'\uD83C\uDF27\uFE0F',65:'\uD83C\uDF27\uFE0F',80:'\uD83C\uDF26\uFE0F',81:'\uD83C\uDF27\uFE0F',82:'\u26C8\uFE0F',95:'\u26A1',96:'\u26A1',99:'\u26A1'};
+var _wIcons={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌧️',55:'🌧️',61:'🌦️',63:'🌧️',65:'🌧️',80:'🌦️',81:'🌧️',82:'⛈️',95:'⚡',96:'⚡',99:'⚡'};
 
 async function loadWeather(){
-  var start=new Date(currentYear,currentMonth,1);
-  var end=new Date(currentYear,currentMonth+1,0);
+  var card=document.getElementById('weather-card');if(!card)return;
   var today=new Date();today.setHours(0,0,0,0);
-  var maxF=new Date(today);maxF.setDate(maxF.getDate()+16);
-  if(start>maxF){document.getElementById('weather-card').style.display='none';return;}
-  var fStart=start<today?today:start;
-  var fEnd=end>maxF?maxF:end;
-  var fs=fmtDate(fStart),fe=fmtDate(fEnd);
-  var ck=fs+'_'+fe;
+  var end=new Date(today);end.setDate(end.getDate()+6);
+  var fs=fmtDate(today),fe=fmtDate(end);
   var wd;
-  if(_wCache[ck]){wd=_wCache[ck];}
+  if(_wCache[fs+'_'+fe]){wd=_wCache[fs+'_'+fe];}
   else{
     try{
       var r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=4.3995&longitude=114.0148&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia/Kuching&start_date='+fs+'&end_date='+fe);
       if(!r.ok)throw 0;var j=await r.json();if(!j.daily||!j.daily.time)throw 0;
-      wd=j.daily;_wCache[ck]=wd;
-    }catch(e){document.getElementById('weather-card').style.display='none';return;}
+      wd=j.daily;_wCache[fs+'_'+fe]=wd;
+    }catch(e){card.style.display='none';return;}
   }
-  var wm={};wd.time.forEach(function(ds,i){wm[ds]={code:wd.weather_code[i],hi:Math.round(wd.temperature_2m_max[i]),lo:Math.round(wd.temperature_2m_min[i]),rain:wd.precipitation_probability_max[i]||0};});
-  var todayStr=fmtDate(new Date()),dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  var html='',cursor=new Date(start);
-  while(cursor<=end){
-    var ds=fmtDate(cursor),w=wm[ds];
-    var dl=ds===todayStr?'Today':dn[cursor.getDay()];
-    var dd=String(cursor.getDate()).padStart(2,'0')+'/'+String(cursor.getMonth()+1).padStart(2,'0');
-    if(w){
-      var ic=_wIcons[w.code]||'\u2601\uFE0F',dc=_wCodes[w.code]||'Cloudy',rc=w.rain>=60?' high':'';
-      html+='<div class="weather-day'+(ds===todayStr?' today':'')+'"><div class="weather-day-name">'+dl+'</div><div style="font-size:7px;color:#cbd5e1;font-weight:700;">'+dd+'</div><div class="weather-day-icon">'+ic+'</div><div class="weather-day-temp">'+w.hi+'\u00b0/'+w.lo+'\u00b0</div><div class="weather-day-rain'+rc+'">\uD83D\uDCA7'+w.rain+'%</div><div class="weather-day-desc">'+dc+'</div></div>';
-    }else{
-      html+='<div class="weather-day" style="opacity:.35;"><div class="weather-day-name">'+dl+'</div><div style="font-size:7px;color:#cbd5e1;font-weight:700;">'+dd+'</div><div class="weather-day-icon">\u2014</div><div class="weather-day-temp" style="color:#cbd5e1;">\u2014</div></div>';
-    }
-    cursor.setDate(cursor.getDate()+1);
+  var todayStr=fs,dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],html='';
+  for(var i=0;i<wd.time.length;i++){
+    var ds=wd.time[i],dt=new Date(ds+'T00:00:00');
+    var dl=ds===todayStr?'Today':dn[dt.getDay()];
+    var dd=String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0');
+    var code=wd.weather_code[i],hi=Math.round(wd.temperature_2m_max[i]),lo=Math.round(wd.temperature_2m_min[i]),rain=wd.precipitation_probability_max[i]||0;
+    var ic=_wIcons[code]||'☁️',dc=_wCodes[code]||'Cloudy',rc=rain>=60?' high':'';
+    html+='<div class="weather-day'+(ds===todayStr?' today':'')+'"><div class="weather-day-name">'+dl+'</div><div style="font-size:8px;color:#cbd5e1;font-weight:700;">'+dd+'</div><div class="weather-day-icon">'+ic+'</div><div class="weather-day-temp">'+hi+'°/'+lo+'°</div><div class="weather-day-rain'+rc+'">💧 '+rain+'%</div><div class="weather-day-desc">'+dc+'</div></div>';
   }
   document.getElementById('weather-strip').innerHTML=html;
-  document.getElementById('weather-card').style.display='';
+  card.style.display='';
 }
 </script>
 </body>
