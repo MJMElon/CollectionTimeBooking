@@ -462,6 +462,12 @@ function renderMonth(){
         inner+='<div style="display:inline-block;background:#fee2e2;color:#991b1b;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Closed</div>';
       }
       if(showHoliday)inner+='<div class="month-holiday-tag">🇲🇾 '+hol+'</div>';
+      // External remark on closed days (set by operations team)
+      var extNote=ovr&&ovr.external_note?String(ovr.external_note).trim():'';
+      if(isTM&&!isPast(cd)&&closed&&extNote){
+        var safeNote=extNote.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        inner+='<div title="'+safeNote+'" style="font-size:8px;font-weight:700;color:#7c2d12;line-height:1.2;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📝 '+safeNote+'</div>';
+      }
       if(isTM&&!closed&&!isPast(cd)){
         if(isDayFullyBooked(ds)){inner+='<div class="booked-tag">Fully Booked</div>';}
         else{inner+='<div style="display:inline-block;background:#d1fae5;color:#065f46;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Open</div>';}
@@ -808,9 +814,27 @@ async function saveChangeBooking(){
   if(!editingBooking)return;
   var btn=document.getElementById('ch-submit');btn.disabled=true;btn.textContent='Saving…';
   var startH=parseInt(editTime.split(':')[0]),hrs=hrsNeeded(editQty),endH=startH+hrs;
-  var updates={booking_date:editDate,start_time:editTime,end_time:String(endH).padStart(2,'0')+':00',collection_qty:editQty};
-  var {error}=await _supabase.from('shared_collection_bookings').update(updates).eq('id',editingBooking.id);
+  var endTime=String(endH).padStart(2,'0')+':00';
+  // Call the SECURITY DEFINER RPC instead of UPDATE — anon role cannot
+  // write to shared_collection_bookings under the hardened RLS, so direct
+  // updates were silently dropped (this was why the new quantity never saved).
+  var {data,error}=await _supabase.rpc('change_my_booking',{
+    _booking_id:editingBooking.id,
+    _order_number:editingBooking.order_number,
+    _new_date:editDate,
+    _new_start:editTime,
+    _new_end:endTime,
+    _new_qty:editQty
+  });
   if(error){showToast('❌ '+error.message);btn.disabled=false;btn.textContent='Save Changes';return;}
+  if(!data||!data.length){
+    showToast('❌ Update blocked — could not save changes');
+    btn.disabled=false;btn.textContent='Save Changes';return;
+  }
+  // Patch local cache so the search-results list reflects the new values
+  // immediately, without waiting for the re-query.
+  var updated=data[0];
+  searchedBookings=searchedBookings.map(function(b){return b.id===updated.id?Object.assign({},b,updated):b;});
   btn.textContent='Save Changes';
   closeChangeBooking();
   showToast('✅ Booking updated');
