@@ -384,7 +384,17 @@ function dayBusyHrs(ds){
   var hours=getHoursFor(ds);
   var c=0;hours.forEach(function(h){if(getHourLoad(ds,h)>0)c++;});return c;
 }
+// Admin-preset full-day block: operations can flip an override to
+// is_fully_booked=true to declare the day full without closing it.
+// Treated like an organic "every slot taken" for the customer — same
+// amber badge, same blocked click — but always wins regardless of the
+// actual slot load.
+function isFullyBookedByAdmin(ds){
+  var ovr=DATE_OVERRIDES[ds];
+  return !!(ovr && ovr.is_open && ovr.is_fully_booked);
+}
 function isDayFullyBooked(ds){
+  if(isFullyBookedByAdmin(ds)) return true;
   var hours=getHoursFor(ds);
   if(!hours.length) return false;
   for(var i=0;i<hours.length;i++){if(maxBookableQty(ds,hours[i])>0)return false;}
@@ -454,6 +464,7 @@ function renderMonth(){
       var isTM=cd.getMonth()===currentMonth,ds=fmtDate(cd),dow=cd.getDay();
       var hol=HOLIDAYS[ds],closed=isDateClosed(ds);
       var ovr=DATE_OVERRIDES[ds];
+      var adminFull=isFullyBookedByAdmin(ds);
       var showHoliday=hol&&!(ovr&&ovr.is_open); // hide holiday tag if overridden open
       if(isTM)has=true;
       var cls='month-cell'+(isToday(cd)?' today':'')+(isPast(cd)?' past':'')+(!isTM?' other-month':'')+(closed?' closed':'')+(showHoliday?' holiday':'');
@@ -462,9 +473,11 @@ function renderMonth(){
         inner+='<div style="display:inline-block;background:#fee2e2;color:#991b1b;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Closed</div>';
       }
       if(showHoliday)inner+='<div class="month-holiday-tag">🇲🇾 '+hol+'</div>';
-      // External remark on closed days (set by operations team)
+      // External remark set by operations — shown on closed days AND on
+      // admin-flagged fully-booked days so customers see the reason in
+      // both states without opening the (blocked) time modal.
       var extNote=ovr&&ovr.external_note?String(ovr.external_note).trim():'';
-      if(isTM&&!isPast(cd)&&closed&&extNote){
+      if(isTM&&!isPast(cd)&&(closed||adminFull)&&extNote){
         var safeNote=extNote.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         inner+='<div title="'+safeNote+'" style="font-size:8px;font-weight:700;color:#7c2d12;line-height:1.2;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+safeNote+'</div>';
       }
@@ -473,7 +486,10 @@ function renderMonth(){
         else{inner+='<div style="display:inline-block;background:#d1fae5;color:#065f46;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Open</div>';}
       }
       var click='';
-      if(isTM&&!closed&&!isPast(cd))click=' onclick="openTimeModal(\''+ds+'\')"';
+      // Admin-flagged fully-booked days are clickable-but-no-op: block
+      // the time modal entirely instead of letting the customer open it
+      // to a list of full slots (the picker UI would mislead).
+      if(isTM&&!closed&&!isPast(cd)&&!adminFull)click=' onclick="openTimeModal(\''+ds+'\')"';
       html+='<div class="'+cls+'"'+click+'>'+inner+'</div>';
       cd.setDate(cd.getDate()+1);
     }
@@ -484,6 +500,10 @@ function renderMonth(){
 
 // ═══════════════ TIME MODAL ═══════════════
 function openTimeModal(ds){
+  // Defensive: the calendar cell skips the onclick on admin-flagged
+  // fully-booked days, but block the modal here too in case the function
+  // is called via deep link / search-result click that doesn't gate.
+  if(isFullyBookedByAdmin(ds))return;
   selectedDate=ds;selectedTime=null;selectedQty=0;
   var d=new Date(ds+'T00:00:00');
   var dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
