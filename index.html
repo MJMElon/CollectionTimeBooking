@@ -419,7 +419,32 @@ window.addEventListener('DOMContentLoaded',function(){
   renderMonth();
   Promise.all([loadMonth(),loadDateOverrides()]).then(function(){renderMonth();});
   loadWeather();
+  // Deep-link entry: ?search=<order or name>[&edit=<bookingId>] pre-fills
+  // the search box and runs it. Used by the salesweb customer portal's
+  // "Change Booking" button so customers land here with their booking
+  // ready to edit instead of having to retype the order number.
+  handleDeepLink();
 });
+
+async function handleDeepLink(){
+  var params = new URLSearchParams(window.location.search);
+  var q      = params.get('search');
+  var editId = params.get('edit');
+  if (!q) return;
+  var input = document.getElementById('search-input');
+  if (input) input.value = q;
+  await searchMyBookings();
+  if (editId) {
+    // searchMyBookings populates searchedBookings; only open the change
+    // modal if the edit id matches one in the result set (defence
+    // against stray ids in the URL).
+    var hit = (searchedBookings || []).find(function(b){ return b.id === editId; });
+    if (hit) {
+      closeMyBookings();
+      openChangeBooking(editId);
+    }
+  }
+}
 
 // ═══════════════ SEARCH ═══════════════
 async function searchMyBookings(){
