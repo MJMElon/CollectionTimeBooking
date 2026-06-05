@@ -595,12 +595,22 @@ function updateEst(){
 var identityValid=false;
 var identityTimer=null;
 var identityChecking=false;
+// Cached row from shared_al_orders when the input matches an existing
+// order. Null = walk-in name path (no linked order). Read on submit
+// to set the booking's al_number / order_number to the real values.
+var verifiedOrder=null;
 
 function validateIdentity(){
   var val=document.getElementById('bk-identity').value.trim();
   var status=document.getElementById('identity-status');
   identityValid=false;
   identityChecking=false;
+  // Reset the cached verified-order ref any time the input changes —
+  // the next lookup either overwrites it with a fresh match or leaves
+  // it null (walk-in name path). Without this reset, editing an
+  // already-verified order number into something else still saved the
+  // OLD order's al_number on submit.
+  verifiedOrder=null;
   clearTimeout(identityTimer);
 
   if(val.length<2){status.classList.add('hidden');checkReady();return;}
@@ -624,10 +634,17 @@ function validateIdentity(){
 
       identityChecking=false;
       if(data&&data.length>0){
+        // Stash the verified row so submitBooking() can write the
+        // REAL al_number / order_number (not the raw user-typed
+        // value). Without this the booking row got al_number:'PENDING'
+        // and the customer portal couldn't match the booking back to
+        // their order on My Account.
+        verifiedOrder=data[0];
         status.className='text-[10px] font-bold mt-2 text-emerald-700';
-        status.textContent='✅ Order number verified';
+        status.textContent='✅ Order verified'+(data[0].customer_name?' — '+data[0].customer_name:'');
         identityValid=true;
       } else {
+        verifiedOrder=null;
         status.className='text-[10px] font-bold mt-2 text-red-500';
         status.textContent='❌ Invalid order number. Please check and enter the correct order number or use your company name instead.';
         identityValid=false;
@@ -635,7 +652,8 @@ function validateIdentity(){
       checkReady();
     },600);
   } else {
-    // Looks like a plain name (no dashes/numbers) — accept
+    // Looks like a plain name (no dashes/numbers) — accept. Walk-in
+    // booking, no linked order; verifiedOrder stays null.
     if(val.length>=3){
       status.classList.remove('hidden');
       status.className='text-[10px] font-bold mt-2 text-emerald-600';
@@ -660,7 +678,22 @@ async function submitBooking(){
   var identity=document.getElementById('bk-identity').value.trim();
   var remark=document.getElementById('bk-remark').value.trim();
   var startH=parseInt(selectedTime.split(':')[0]),hrs=hrsNeeded(selectedQty),endH=startH+hrs;
-  var payload={booking_date:selectedDate,start_time:selectedTime,end_time:String(endH).padStart(2,'0')+':00',al_number:'PENDING',customer_name:identity,order_number:identity,collection_qty:selectedQty,status:'pending',notes:remark||'Customer self-booking ('+hrs+' hr)'};
+  // When the input matched a real order (verifiedOrder set by
+  // checkIdentity), pin al_number / order_number / customer_name to
+  // the canonical values from shared_al_orders so the customer
+  // portal's order detail can find this booking by order_number.
+  // Walk-in name flow falls back to 'PENDING' + the raw input.
+  var payload={
+    booking_date:selectedDate,
+    start_time:selectedTime,
+    end_time:String(endH).padStart(2,'0')+':00',
+    al_number:    verifiedOrder ? verifiedOrder.al_number    : 'PENDING',
+    order_number: verifiedOrder ? verifiedOrder.order_number : identity,
+    customer_name:verifiedOrder ? (verifiedOrder.customer_name||identity) : identity,
+    collection_qty:selectedQty,
+    status:'pending',
+    notes:remark||'Customer self-booking ('+hrs+' hr)'
+  };
   var {error}=await _supabase.from('shared_collection_bookings').insert([payload]);
   if(error){showToast('❌ '+error.message);btn.disabled=false;btn.textContent='📅 Confirm Booking';return;}
   btn.textContent='📅 Confirm Booking';closeBookingModal();
