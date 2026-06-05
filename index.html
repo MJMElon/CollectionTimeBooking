@@ -610,6 +610,15 @@ function updateEst(){
     '<div class="text-xs font-bold text-blue-600 mt-1">'+fmtHr(startH)+' to '+fmtHr(endH)+'</div>'+
     '<div class="text-[10px] font-bold text-slate-400 mt-1">Your selected quantity of '+selectedQty.toLocaleString()+' seedlings will take approximately '+hrs+' hour'+(hrs>1?'s':'')+' to prepare and load.</div></div>';
 
+  // When the customer entered a real order number, refuse to book a
+  // qty greater than the order's quantity_ordered. Stops accidental
+  // "I ordered 100 seedlings but typed 1000 here" bookings. Walk-in
+  // name path has no cap (verifiedOrder is null).
+  if(verifiedOrder && Number(verifiedOrder.quantity_ordered)>0 && selectedQty>Number(verifiedOrder.quantity_ordered)){
+    warn.classList.remove('hidden');
+    warn.textContent='⚠️ Quantity ('+selectedQty.toLocaleString()+') exceeds your order of '+Number(verifiedOrder.quantity_ordered).toLocaleString()+' seedlings. Please reduce.';
+    return;
+  }
   if(endH>cl){warn.classList.remove('hidden');warn.textContent='⚠️ Exceeds closing time ('+fmtHr(cl)+'). Reduce quantity or pick an earlier slot.';return;}
   if(!canFit(selectedDate,startH,selectedQty)){
     warn.classList.remove('hidden');
@@ -653,7 +662,7 @@ function validateIdentity(){
 
     identityTimer=setTimeout(async function(){
       var {data}=await _supabase.from('shared_al_orders')
-        .select('al_number,customer_name,order_number')
+        .select('al_number,customer_name,order_number,quantity_ordered,balance_quantity')
         .or('order_number.ilike.%'+val+'%,al_number.ilike.%'+val+'%')
         .limit(1);
 
@@ -663,10 +672,14 @@ function validateIdentity(){
         // REAL al_number / order_number (not the raw user-typed
         // value). Without this the booking row got al_number:'PENDING'
         // and the customer portal couldn't match the booking back to
-        // their order on My Account.
+        // their order on My Account. We also pull quantity_ordered so
+        // the qty step can cap at the ordered amount — no booking 500
+        // seedlings against an order for 100.
         verifiedOrder=data[0];
+        var ordered = Number(data[0].quantity_ordered)||0;
+        var orderedTxt = ordered>0 ? ' — '+ordered.toLocaleString()+' seedlings ordered' : '';
         status.className='text-[10px] font-bold mt-2 text-emerald-700';
-        status.textContent='✅ Order verified'+(data[0].customer_name?' — '+data[0].customer_name:'');
+        status.textContent='✅ Order verified'+(data[0].customer_name?' — '+data[0].customer_name:'')+orderedTxt;
         identityValid=true;
       } else {
         verifiedOrder=null;
@@ -694,6 +707,13 @@ function validateIdentity(){
 
 function checkReady(){
   var fits=selectedDate&&selectedTime&&selectedQty>0&&identityValid&&!identityChecking&&canFit(selectedDate,parseInt((selectedTime||'08').split(':')[0]),selectedQty);
+  // Order-quantity cap (tracked orders only) — block submit when the
+  // qty input is higher than what was ordered. updateEst() already
+  // shows the warning text; this just disables the button so the
+  // customer can't push past it.
+  if(fits && verifiedOrder && Number(verifiedOrder.quantity_ordered)>0 && selectedQty>Number(verifiedOrder.quantity_ordered)){
+    fits=false;
+  }
   document.getElementById('bk-submit').disabled=!fits;
 }
 
