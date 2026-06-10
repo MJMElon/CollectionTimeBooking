@@ -585,6 +585,11 @@ function backToTimeSlots(){closeBookingModal();openTimeModal(selectedDate);}
 
 // ═══════════════ QTY ═══════════════
 function pickQty(q){
+  // Per-AL availability cap: (balance - already pending bookings).
+  if(verifiedOrder && availableQty>0 && q>availableQty){
+    showToast('⚠️ You can only book up to '+availableQty.toLocaleString()+' seedlings (AL availability).');
+    q=availableQty;
+  }
   selectedQty=q;document.getElementById('bk-custom-qty').value='';
   document.querySelectorAll('.cq-btn').forEach(function(b){var v=parseInt(b.textContent.replace(/[^0-9]/g,''));b.classList.toggle('active',v===q);});
   document.getElementById('qty-value').textContent=q.toLocaleString();
@@ -593,6 +598,11 @@ function pickQty(q){
 }
 function pickCustomQty(){
   var v=parseInt(document.getElementById('bk-custom-qty').value)||0;
+  if(verifiedOrder && availableQty>0 && v>availableQty){
+    showToast('⚠️ You can only book up to '+availableQty.toLocaleString()+' seedlings (AL availability).');
+    v=availableQty;
+    document.getElementById('bk-custom-qty').value=v;
+  }
   document.querySelectorAll('.cq-btn').forEach(function(b){b.classList.remove('active');});
   if(v>0){selectedQty=v;document.getElementById('qty-value').textContent=v.toLocaleString();document.getElementById('qty-label').classList.remove('hidden');}
   else{selectedQty=0;document.getElementById('qty-label').classList.add('hidden');}
@@ -610,13 +620,13 @@ function updateEst(){
     '<div class="text-xs font-bold text-blue-600 mt-1">'+fmtHr(startH)+' to '+fmtHr(endH)+'</div>'+
     '<div class="text-[10px] font-bold text-slate-400 mt-1">Your selected quantity of '+selectedQty.toLocaleString()+' seedlings will take approximately '+hrs+' hour'+(hrs>1?'s':'')+' to prepare and load.</div></div>';
 
-  // When the customer entered a real order number, refuse to book a
-  // qty greater than the order's quantity_ordered. Stops accidental
-  // "I ordered 100 seedlings but typed 1000 here" bookings. Walk-in
-  // name path has no cap (verifiedOrder is null).
-  if(verifiedOrder && Number(verifiedOrder.quantity_ordered)>0 && selectedQty>Number(verifiedOrder.quantity_ordered)){
+  // When the customer entered a real order number / AL / company name,
+  // refuse a qty greater than what's still bookable against that AL.
+  // Cap = balance_quantity − sum of still-active (pending/booked) bookings
+  // for the same AL. Walk-in name path has no cap (verifiedOrder is null).
+  if(verifiedOrder && selectedQty>availableQty){
     warn.classList.remove('hidden');
-    warn.textContent='⚠️ Quantity ('+selectedQty.toLocaleString()+') exceeds your order of '+Number(verifiedOrder.quantity_ordered).toLocaleString()+' seedlings. Please reduce.';
+    warn.textContent='⚠️ Quantity ('+selectedQty.toLocaleString()+') exceeds your AL availability of '+availableQty.toLocaleString()+' seedlings (balance minus already-pending bookings). Please reduce.';
     return;
   }
   if(endH>cl){warn.classList.remove('hidden');warn.textContent='⚠️ Exceeds closing time ('+fmtHr(cl)+'). Reduce quantity or pick an earlier slot.';return;}
@@ -630,9 +640,16 @@ var identityValid=false;
 var identityTimer=null;
 var identityChecking=false;
 // Cached row from shared_al_orders when the input matches an existing
-// order. Null = walk-in name path (no linked order). Read on submit
-// to set the booking's al_number / order_number to the real values.
+// AL. Null = walk-in name path (no linked AL). Read on submit to set
+// the booking's al_number / order_number to the real values, and used
+// by updateEst() / checkReady() to enforce the per-AL quota.
 var verifiedOrder=null;
+// Bookable qty for the matched AL = balance_quantity − sum of still-active
+// bookings (pending or booked) already against this AL. Recomputed each
+// time the AL is resolved and re-checked at submit time.
+var availableQty=0;
+
+function _bkEsc(s){return String(s||'').replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
 
 function validateIdentity(){
   var val=document.getElementById('bk-identity').value.trim();
@@ -641,77 +658,112 @@ function validateIdentity(){
   identityChecking=false;
   // Reset the cached verified-order ref any time the input changes —
   // the next lookup either overwrites it with a fresh match or leaves
-  // it null (walk-in name path). Without this reset, editing an
-  // already-verified order number into something else still saved the
-  // OLD order's al_number on submit.
+  // it null. Without this reset, editing an already-verified order
+  // number into something else still saved the OLD order's al_number.
   verifiedOrder=null;
+  availableQty=0;
   clearTimeout(identityTimer);
 
   if(val.length<2){status.classList.add('hidden');checkReady();return;}
 
-  // Check if it looks like an order number (contains dash, slash, or starts with letters+digits)
-  var looksLikeOrder=/[-\/]/.test(val)||/^[A-Z]{1,4}[\-\s]?\d/i.test(val)||/\d{3,}/.test(val);
+  status.classList.remove('hidden');
+  status.className='text-[10px] font-bold mt-2 text-slate-400';
+  status.textContent='Verifying…';
+  identityChecking=true;
+  checkReady();
 
-  if(looksLikeOrder){
-    // Must validate against database — block booking if invalid
-    status.classList.remove('hidden');
-    status.className='text-[10px] font-bold mt-2 text-slate-400';
-    status.textContent='Verifying order number…';
-    identityChecking=true;
-    checkReady();
+  // Sanitize for PostgREST .or() — strip parens / commas which are its
+  // delimiters. The remaining string is used inside .ilike(%...%).
+  var safe=val.replace(/[,()]/g,'');
 
-    identityTimer=setTimeout(async function(){
-      var {data}=await _supabase.from('shared_al_orders')
-        .select('al_number,customer_name,order_number,quantity_ordered,balance_quantity')
-        .or('order_number.ilike.%'+val+'%,al_number.ilike.%'+val+'%')
-        .limit(1);
+  identityTimer=setTimeout(async function(){
+    try {
+      // Resolve the AL by order# / AL# / company name. We only consider
+      // ALs that are not Cancelled and still have remaining balance —
+      // anything else can't be booked against by definition. Sorted by
+      // balance descending so the most-bookable match wins when several
+      // ALs share a partial-match string.
+      var {data:als}=await _supabase.from('shared_al_orders')
+        .select('al_number,customer_name,order_number,quantity_ordered,balance_quantity,status')
+        .or('order_number.ilike.%'+safe+'%,al_number.ilike.%'+safe+'%,customer_name.ilike.%'+safe+'%')
+        .neq('status','Cancelled')
+        .gt('balance_quantity', 0)
+        .order('balance_quantity', { ascending: false })
+        .limit(5);
+
+      if(!als || als.length===0){
+        identityChecking=false;
+        // No AL matched. If the input looks like an order/AL number, the
+        // customer probably mistyped — reject so they fix it. If it looks
+        // like a plain company / personal name, accept as a walk-in with
+        // no per-AL quota (existing behavior, preserved).
+        var looksLikeOrder=/[-\/]/.test(val)||/^[A-Z]{1,4}[\-\s]?\d/i.test(val)||/\d{3,}/.test(val);
+        if(looksLikeOrder){
+          status.className='text-[10px] font-bold mt-2 text-red-500';
+          status.textContent='❌ Invalid order number. Please check and enter the correct order number or use your company name instead.';
+          identityValid=false;
+        } else if(val.length>=3){
+          status.className='text-[10px] font-bold mt-2 text-emerald-600';
+          status.textContent='✅ Booking under: '+val+' (no linked order — collection quantity uncapped)';
+          identityValid=true;
+        } else {
+          status.classList.add('hidden');
+          identityValid=false;
+        }
+        verifiedOrder=null;
+        availableQty=0;
+        checkReady();
+        return;
+      }
+
+      var al=als[0];
+      verifiedOrder=al;
+
+      // Sum already-active bookings for this AL (pending or booked).
+      // Completed bookings are excluded because the qty would already be
+      // deducted from balance_quantity when the DO is issued; cancelled
+      // bookings are excluded because the slot was released.
+      var {data:bks}=await _supabase.from('shared_collection_bookings')
+        .select('collection_qty,status')
+        .eq('al_number', al.al_number)
+        .in('status', ['pending','booked']);
+
+      var pendingSum=(bks||[]).reduce(function(s,b){return s+(b.collection_qty||0);},0);
+      availableQty=Math.max(0, (al.balance_quantity||0) - pendingSum);
 
       identityChecking=false;
-      if(data&&data.length>0){
-        // Stash the verified row so submitBooking() can write the
-        // REAL al_number / order_number (not the raw user-typed
-        // value). Without this the booking row got al_number:'PENDING'
-        // and the customer portal couldn't match the booking back to
-        // their order on My Account. We also pull quantity_ordered so
-        // the qty step can cap at the ordered amount — no booking 500
-        // seedlings against an order for 100.
-        verifiedOrder=data[0];
-        var ordered = Number(data[0].quantity_ordered)||0;
-        var orderedTxt = ordered>0 ? ' — '+ordered.toLocaleString()+' seedlings ordered' : '';
-        status.className='text-[10px] font-bold mt-2 text-emerald-700';
-        status.textContent='✅ Order verified'+(data[0].customer_name?' — '+data[0].customer_name:'')+orderedTxt;
-        identityValid=true;
-      } else {
-        verifiedOrder=null;
+      var balTxt=(al.balance_quantity||0).toLocaleString();
+      var penTxt=pendingSum.toLocaleString();
+      var avlTxt=availableQty.toLocaleString();
+      if(availableQty<=0){
         status.className='text-[10px] font-bold mt-2 text-red-500';
-        status.textContent='❌ Invalid order number. Please check and enter the correct order number or use your company name instead.';
+        status.innerHTML='⚠️ Verified: <b>'+_bkEsc(al.customer_name||'')+'</b> (AL '+_bkEsc(al.al_number)+')<br>'+
+          'Fully booked: '+balTxt+' balance with '+penTxt+' already pending. Wait for a pending booking to complete or cancel before booking again.';
         identityValid=false;
+      } else {
+        status.className='text-[10px] font-bold mt-2 text-emerald-700';
+        status.innerHTML='✅ Verified: <b>'+_bkEsc(al.customer_name||'')+'</b> (AL '+_bkEsc(al.al_number)+')<br>'+
+          'AL balance: '+balTxt+' &middot; Already booked: '+penTxt+' &middot; <b>Available to book: '+avlTxt+' seedlings</b>';
+        identityValid=true;
       }
-      checkReady();
-    },600);
-  } else {
-    // Looks like a plain name (no dashes/numbers) — accept. Walk-in
-    // booking, no linked order; verifiedOrder stays null.
-    if(val.length>=3){
-      status.classList.remove('hidden');
-      status.className='text-[10px] font-bold mt-2 text-emerald-600';
-      status.textContent='✅ Booking under: '+val;
-      identityValid=true;
-    } else {
-      status.classList.add('hidden');
+    } catch(e) {
+      identityChecking=false;
+      status.className='text-[10px] font-bold mt-2 text-red-500';
+      status.textContent='❌ Could not verify — '+(e.message||e);
       identityValid=false;
+      availableQty=0;
     }
+    updateEst();
     checkReady();
-  }
+  },600);
 }
 
 function checkReady(){
   var fits=selectedDate&&selectedTime&&selectedQty>0&&identityValid&&!identityChecking&&canFit(selectedDate,parseInt((selectedTime||'08').split(':')[0]),selectedQty);
-  // Order-quantity cap (tracked orders only) — block submit when the
-  // qty input is higher than what was ordered. updateEst() already
-  // shows the warning text; this just disables the button so the
-  // customer can't push past it.
-  if(fits && verifiedOrder && Number(verifiedOrder.quantity_ordered)>0 && selectedQty>Number(verifiedOrder.quantity_ordered)){
+  // Per-AL availability cap (matched orders only) — block submit when
+  // the qty input exceeds availableQty (balance − pending). updateEst()
+  // already shows the warning; this just disables the button.
+  if(fits && verifiedOrder && selectedQty>availableQty){
     fits=false;
   }
   document.getElementById('bk-submit').disabled=!fits;
@@ -722,6 +774,27 @@ async function submitBooking(){
   var btn=document.getElementById('bk-submit');btn.disabled=true;btn.textContent='Submitting…';
   var identity=document.getElementById('bk-identity').value.trim();
   var remark=document.getElementById('bk-remark').value.trim();
+
+  // Race-safety: another customer may have booked against the same AL
+  // between the verify step and this submit. Re-check availableQty so
+  // a slot can't be over-committed.
+  if(verifiedOrder){
+    var {data:bks}=await _supabase.from('shared_collection_bookings')
+      .select('collection_qty,status')
+      .eq('al_number', verifiedOrder.al_number)
+      .in('status', ['pending','booked']);
+    var pendingSum=(bks||[]).reduce(function(s,b){return s+(b.collection_qty||0);},0);
+    var nowAvailable=Math.max(0, (verifiedOrder.balance_quantity||0) - pendingSum);
+    if(selectedQty>nowAvailable){
+      availableQty=nowAvailable;
+      var status=document.getElementById('identity-status');
+      status.className='text-[10px] font-bold mt-2 text-red-500';
+      status.innerHTML='⚠️ Only <b>'+nowAvailable.toLocaleString()+'</b> seedlings available now — another booking was just made. Reduce your quantity and try again.';
+      btn.disabled=false;btn.textContent='📅 Confirm Booking';
+      return;
+    }
+  }
+
   var startH=parseInt(selectedTime.split(':')[0]),hrs=hrsNeeded(selectedQty),endH=startH+hrs;
   // When the input matched a real order (verifiedOrder set by
   // checkIdentity), pin al_number / order_number / customer_name to
