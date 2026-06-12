@@ -238,9 +238,9 @@
     </div>
     <div class="p-5 sm:p-6 space-y-4">
       <div>
-        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Order Number or Company Name *</label>
+        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Order Number *</label>
         <div style="position:relative;">
-          <input id="bk-identity" type="text" autocomplete="off" class="search-input text-sm" style="padding:10px 14px;width:100%;" placeholder="Your order number or company name" oninput="validateIdentity()" onblur="setTimeout(function(){var s=document.getElementById('bk-suggest');if(s)s.classList.add('hidden');},200)" onfocus="if(document.getElementById('bk-identity').value.length>=2)validateIdentity()">
+          <input id="bk-identity" type="text" autocomplete="off" class="search-input text-sm" style="padding:10px 14px;width:100%;" placeholder="Your order number (e.g. 4EB8U6)" oninput="validateIdentity()" onblur="setTimeout(function(){var s=document.getElementById('bk-suggest');if(s)s.classList.add('hidden');},200)" onfocus="if(document.getElementById('bk-identity').value.length>=2)validateIdentity()">
           <div id="bk-suggest" class="hidden" style="position:absolute;top:100%;left:0;right:0;z-index:60;background:white;border:1px solid #e2e8f0;border-radius:0.625rem;margin-top:4px;max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(15,23,42,0.12);"></div>
         </div>
         <div id="identity-status" class="hidden text-[10px] font-bold mt-2"></div>
@@ -714,14 +714,17 @@ function validateIdentity(){
 
   identityTimer=setTimeout(async function(){
     try {
-      // Resolve the AL by order# / AL# / company name. We only consider
-      // ALs that are not Cancelled and still have remaining balance —
-      // anything else can't be booked against by definition. Sorted by
-      // balance descending so the most-bookable match wins when several
-      // ALs share a partial-match string.
+      // Resolve the AL by order number / AL number ONLY. Matching against
+      // customer_name was causing partial hits like "lee" → "WANG LEE
+      // COMPANY", letting the customer book against an unrelated company's
+      // AL. The order/AL identifier is the only safe key for this lookup.
+      // We still filter to ALs that are not Cancelled and have remaining
+      // balance — anything else can't be booked against by definition.
+      // Sorted by balance descending so the most-bookable match wins when
+      // a prefix is shared across several order numbers.
       var {data:als}=await _supabase.from('shared_al_orders')
         .select('al_number,customer_name,order_number,quantity_ordered,balance_quantity,status')
-        .or('order_number.ilike.%'+safe+'%,al_number.ilike.%'+safe+'%,customer_name.ilike.%'+safe+'%')
+        .or('order_number.ilike.%'+safe+'%,al_number.ilike.%'+safe+'%')
         .neq('status','Cancelled')
         .gt('balance_quantity', 0)
         .order('balance_quantity', { ascending: false })
@@ -733,23 +736,14 @@ function validateIdentity(){
 
       if(!als || als.length===0){
         identityChecking=false;
-        // No AL matched. If the input looks like an order/AL number, the
-        // customer probably mistyped — reject so they fix it. If it looks
-        // like a plain company / personal name, accept as a walk-in with
-        // no per-AL quota (existing behavior, preserved).
-        var looksLikeOrder=/[-\/]/.test(val)||/^[A-Z]{1,4}[\-\s]?\d/i.test(val)||/\d{3,}/.test(val);
-        if(looksLikeOrder){
-          status.className='text-[10px] font-bold mt-2 text-red-500';
-          status.textContent='❌ Invalid order number. Please check and enter the correct order number or use your company name instead.';
-          identityValid=false;
-        } else if(val.length>=3){
-          status.className='text-[10px] font-bold mt-2 text-emerald-600';
-          status.textContent='✅ Booking under: '+val+' (no linked order — collection quantity uncapped)';
-          identityValid=true;
-        } else {
-          status.classList.add('hidden');
-          identityValid=false;
-        }
+        // Order-number-only matching: no walk-in fallback. If the input
+        // doesn't match an active AL, reject so the customer has to enter
+        // (or paste) the actual order number from their purchase receipt
+        // / AL letter — protects against partial-name mismatches like
+        // "lee" hitting an unrelated "WANG LEE COMPANY" AL.
+        status.className='text-[10px] font-bold mt-2 text-red-500';
+        status.textContent='❌ Order number not found. Please enter the exact order number from your purchase receipt or AL letter.';
+        identityValid=false;
         verifiedOrder=null;
         availableQty=0;
         checkReady();
