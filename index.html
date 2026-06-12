@@ -239,7 +239,10 @@
     <div class="p-5 sm:p-6 space-y-4">
       <div>
         <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Order Number or Company Name *</label>
-        <input id="bk-identity" type="text" class="search-input text-sm" style="padding:10px 14px;" placeholder="Your order number or company name" oninput="validateIdentity()">
+        <div style="position:relative;">
+          <input id="bk-identity" type="text" autocomplete="off" class="search-input text-sm" style="padding:10px 14px;width:100%;" placeholder="Your order number or company name" oninput="validateIdentity()" onblur="setTimeout(function(){var s=document.getElementById('bk-suggest');if(s)s.classList.add('hidden');},200)" onfocus="if(document.getElementById('bk-identity').value.length>=2)validateIdentity()">
+          <div id="bk-suggest" class="hidden" style="position:absolute;top:100%;left:0;right:0;z-index:60;background:white;border:1px solid #e2e8f0;border-radius:0.625rem;margin-top:4px;max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(15,23,42,0.12);"></div>
+        </div>
         <div id="identity-status" class="hidden text-[10px] font-bold mt-2"></div>
       </div>
       <div>
@@ -651,6 +654,39 @@ var availableQty=0;
 
 function _bkEsc(s){return String(s||'').replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
 
+// Render up to 5 matching ALs as a clickable suggestion dropdown below the
+// identity input. Picking a row fills the input and re-runs validateIdentity()
+// so the rest of the flow (verifiedOrder + availableQty + UI banner) follows.
+function _bkRenderSuggestions(als){
+  var box=document.getElementById('bk-suggest');
+  if(!box)return;
+  if(!als || als.length===0){ box.classList.add('hidden'); box.innerHTML=''; return; }
+  var html='';
+  for(var i=0;i<als.length;i++){
+    var al=als[i];
+    var name=_bkEsc(al.customer_name||'(unnamed)');
+    var ord=_bkEsc(al.order_number||al.al_number||'');
+    var aln=_bkEsc(al.al_number||'');
+    var bal=(al.balance_quantity||0).toLocaleString();
+    html += '<div onmousedown="event.preventDefault();_bkPickSuggestion(\''+_bkEsc(al.order_number||al.al_number||'').replace(/\'/g,"\\'")+'\')" '+
+      'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:13px;" '+
+      'onmouseover="this.style.background=\'#f0fdf4\';" onmouseout="this.style.background=\'\';">'+
+      '<div style="font-weight:700;color:#0f172a;">'+name+'</div>'+
+      '<div style="font-size:11px;color:#64748b;margin-top:2px;">AL '+aln+' &middot; Order '+ord+' &middot; Balance: <b style="color:#047857;">'+bal+'</b> seedlings</div>'+
+    '</div>';
+  }
+  box.innerHTML=html;
+  box.classList.remove('hidden');
+}
+
+function _bkPickSuggestion(val){
+  var input=document.getElementById('bk-identity');
+  if(input){ input.value=val; }
+  var box=document.getElementById('bk-suggest');
+  if(box){ box.classList.add('hidden'); }
+  validateIdentity();
+}
+
 function validateIdentity(){
   var val=document.getElementById('bk-identity').value.trim();
   var status=document.getElementById('identity-status');
@@ -664,7 +700,7 @@ function validateIdentity(){
   availableQty=0;
   clearTimeout(identityTimer);
 
-  if(val.length<2){status.classList.add('hidden');checkReady();return;}
+  if(val.length<2){status.classList.add('hidden');_bkRenderSuggestions([]);checkReady();return;}
 
   status.classList.remove('hidden');
   status.className='text-[10px] font-bold mt-2 text-slate-400';
@@ -690,6 +726,10 @@ function validateIdentity(){
         .gt('balance_quantity', 0)
         .order('balance_quantity', { ascending: false })
         .limit(5);
+
+      // Show the matched ALs as a clickable dropdown so the customer can
+      // confirm or switch when several of their orders share a name.
+      _bkRenderSuggestions(als);
 
       if(!als || als.length===0){
         identityChecking=false;
@@ -722,11 +762,19 @@ function validateIdentity(){
       // Sum already-active bookings for this AL (pending or booked).
       // Completed bookings are excluded because the qty would already be
       // deducted from balance_quantity when the DO is issued; cancelled
-      // bookings are excluded because the slot was released.
+      // bookings are excluded because the slot was released. Past-dated
+      // bookings are also excluded — once the booking date passes the slot
+      // has either been collected (and reflected via a DO) or no-showed,
+      // either way it shouldn't keep blocking the customer's future quota.
+      var today = new Date();
+      var todayStr = today.getFullYear() + '-' +
+        String(today.getMonth() + 1).padStart(2, '0') + '-' +
+        String(today.getDate()).padStart(2, '0');
       var {data:bks}=await _supabase.from('shared_collection_bookings')
-        .select('collection_qty,status')
+        .select('collection_qty,status,booking_date')
         .eq('al_number', al.al_number)
-        .in('status', ['pending','booked']);
+        .in('status', ['pending','booked'])
+        .gte('booking_date', todayStr);
 
       var pendingSum=(bks||[]).reduce(function(s,b){return s+(b.collection_qty||0);},0);
       availableQty=Math.max(0, (al.balance_quantity||0) - pendingSum);
@@ -779,10 +827,15 @@ async function submitBooking(){
   // between the verify step and this submit. Re-check availableQty so
   // a slot can't be over-committed.
   if(verifiedOrder){
+    var _todayD = new Date();
+    var _todayStr = _todayD.getFullYear() + '-' +
+      String(_todayD.getMonth() + 1).padStart(2, '0') + '-' +
+      String(_todayD.getDate()).padStart(2, '0');
     var {data:bks}=await _supabase.from('shared_collection_bookings')
-      .select('collection_qty,status')
+      .select('collection_qty,status,booking_date')
       .eq('al_number', verifiedOrder.al_number)
-      .in('status', ['pending','booked']);
+      .in('status', ['pending','booked'])
+      .gte('booking_date', _todayStr);
     var pendingSum=(bks||[]).reduce(function(s,b){return s+(b.collection_qty||0);},0);
     var nowAvailable=Math.max(0, (verifiedOrder.balance_quantity||0) - pendingSum);
     if(selectedQty>nowAvailable){
