@@ -71,6 +71,7 @@
   .month-cell.other-month{background:#fafafa;opacity:.35;cursor:default;}.month-cell.other-month:hover{background:#fafafa;}
   .month-cell.today{background:#ecfdf5;}
   .month-cell.past{opacity:.4;cursor:default;}.month-cell.past:hover{background:transparent;}
+  .month-cell.too-soon{background:#fffbeb;cursor:default;}.month-cell.too-soon:hover{background:#fffbeb;}
   .month-cell.closed{background:#f8f8f8;cursor:default;}.month-cell.closed:hover{background:#f8f8f8;}
   .month-cell.holiday{background:#fef2f2;cursor:default;}.month-cell.holiday:hover{background:#fef2f2;}
   .month-day-num{font-size:12px;font-weight:900;color:#334155;margin-bottom:2px;}
@@ -150,6 +151,7 @@
     <span>🛒</span><span>Purchase Seedlings — Order Now</span>
   </a>
   <div class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mon&ndash;Fri 8AM&ndash;5PM &bull; Sat 8AM&ndash;12PM &bull; Sun &amp; Holidays Closed</div>
+  <div class="text-center text-[10px] font-bold text-amber-600 uppercase tracking-widest">&#9201; Bookings require at least 48 hours&rsquo; advance notice</div>
 </div>
 
 <!-- MY BOOKINGS MODAL -->
@@ -316,6 +318,16 @@ async function loadDateOverrides(){
 function fmtDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function isToday(d){var t=new Date();return d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()&&d.getDate()===t.getDate();}
 function isPast(d){var t=new Date();t.setHours(0,0,0,0);var c=new Date(d);c.setHours(0,0,0,0);return c<t;}
+// ── 48-hour advance-booking rule ──────────────────────────────
+// Customers must book at least MIN_LEAD_HOURS ahead — they cannot book
+// today or any slot inside the notice window. Worked at day granularity:
+// e.g. booking on the 18th → earliest selectable date is the 20th.
+var MIN_LEAD_HOURS=48;
+// Earliest bookable date = midnight of (now + lead window).
+function leadCutoffDate(){var c=new Date(Date.now()+MIN_LEAD_HOURS*3600*1000);c.setHours(0,0,0,0);return c;}
+// True when a date is still inside the notice window (too soon to book).
+// Distinct from isPast: the day isn't gone, it just isn't far enough out.
+function isTooSoon(d){var c=new Date(d);c.setHours(0,0,0,0);return c<leadCutoffDate();}
 function fmtHr(h){if(h<12)return h+' AM';if(h===12)return '12 PM';return(h-12)+' PM';}
 function slotLbl(h){return fmtHr(h)+' – '+fmtHr(h+1);}
 function hrsNeeded(q){return Math.ceil(q/RATE);}
@@ -493,9 +505,13 @@ function renderMonth(){
       var hol=HOLIDAYS[ds],closed=isDateClosed(ds);
       var ovr=DATE_OVERRIDES[ds];
       var adminFull=isFullyBookedByAdmin(ds);
+      // Inside the 48-hour notice window — only flag days that would
+      // otherwise be open (not past, not closed) so the badge reads as a
+      // lead-time block rather than a closure.
+      var tooSoon=!isPast(cd)&&!closed&&isTooSoon(cd);
       var showHoliday=hol&&!(ovr&&ovr.is_open); // hide holiday tag if overridden open
       if(isTM)has=true;
-      var cls='month-cell'+(isToday(cd)?' today':'')+(isPast(cd)?' past':'')+(!isTM?' other-month':'')+(closed?' closed':'')+(showHoliday?' holiday':'');
+      var cls='month-cell'+(isToday(cd)?' today':'')+(isPast(cd)?' past':'')+(!isTM?' other-month':'')+(closed?' closed':'')+(showHoliday?' holiday':'')+(isTM&&tooSoon?' too-soon':'');
       var inner='<div class="month-day-num">'+cd.getDate()+'</div>';
       if(isTM&&!isPast(cd)&&closed){
         inner+='<div style="display:inline-block;background:#fee2e2;color:#991b1b;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Closed</div>';
@@ -510,14 +526,16 @@ function renderMonth(){
         inner+='<div title="'+safeNote+'" style="font-size:8px;font-weight:700;color:#7c2d12;line-height:1.2;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+safeNote+'</div>';
       }
       if(isTM&&!closed&&!isPast(cd)){
-        if(isDayFullyBooked(ds)){inner+='<div class="booked-tag">Fully Booked</div>';}
+        if(tooSoon){inner+='<div style="display:inline-block;background:#fef3c7;color:#92400e;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Min 48h Notice</div>';}
+        else if(isDayFullyBooked(ds)){inner+='<div class="booked-tag">Fully Booked</div>';}
         else{inner+='<div style="display:inline-block;background:#d1fae5;color:#065f46;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Open</div>';}
       }
       var click='';
       // Admin-flagged fully-booked days are clickable-but-no-op: block
       // the time modal entirely instead of letting the customer open it
-      // to a list of full slots (the picker UI would mislead).
-      if(isTM&&!closed&&!isPast(cd)&&!adminFull)click=' onclick="openTimeModal(\''+ds+'\')"';
+      // to a list of full slots (the picker UI would mislead). Days inside
+      // the 48-hour notice window are likewise non-clickable.
+      if(isTM&&!closed&&!isPast(cd)&&!adminFull&&!tooSoon)click=' onclick="openTimeModal(\''+ds+'\')"';
       html+='<div class="'+cls+'"'+click+'>'+inner+'</div>';
       cd.setDate(cd.getDate()+1);
     }
@@ -532,6 +550,9 @@ function openTimeModal(ds){
   // fully-booked days, but block the modal here too in case the function
   // is called via deep link / search-result click that doesn't gate.
   if(isFullyBookedByAdmin(ds))return;
+  // Enforce the 48-hour rule here too (deep-link / search-result paths
+  // can reach this without going through the calendar gate).
+  if(isTooSoon(new Date(ds+'T00:00:00'))){showToast('⚠️ Bookings must be made at least 48 hours in advance.');return;}
   selectedDate=ds;selectedTime=null;selectedQty=0;
   var d=new Date(ds+'T00:00:00');
   var dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -814,6 +835,12 @@ function checkReady(){
 // ═══════════════ SUBMIT ═══════════════
 async function submitBooking(){
   var btn=document.getElementById('bk-submit');btn.disabled=true;btn.textContent='Submitting…';
+  // Final 48-hour guard before insert — covers any path that set
+  // selectedDate without re-checking the lead window.
+  if(isTooSoon(new Date(selectedDate+'T00:00:00'))){
+    showToast('⚠️ Bookings must be made at least 48 hours in advance.');
+    btn.disabled=false;btn.textContent='📅 Confirm Booking';return;
+  }
   var identity=document.getElementById('bk-identity').value.trim();
   var remark=document.getElementById('bk-remark').value.trim();
 
@@ -926,7 +953,9 @@ function openChangeBooking(id){
   document.getElementById('ch-current-label').textContent='Current: '+d.toLocaleDateString('en-MY',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+' — '+fmtHr(sH)+' to '+fmtHr(eH)+' ('+(b.collection_qty||0).toLocaleString()+' seedlings)';
 
   document.getElementById('ch-date').value=editDate;
-  document.getElementById('ch-date').min=fmtDate(new Date());
+  // 48-hour rule applies to reschedules too — earliest selectable date
+  // is the lead cutoff, not today.
+  document.getElementById('ch-date').min=fmtDate(leadCutoffDate());
   document.getElementById('ch-date-warn').classList.add('hidden');
   document.getElementById('ch-custom-qty').value='';
   document.getElementById('ch-qty-value').textContent=editQty.toLocaleString();
@@ -952,6 +981,7 @@ function onChangeDateChange(){
   var d=new Date(v+'T00:00:00');
   var warn=document.getElementById('ch-date-warn');
   if(isPast(d)){warn.classList.remove('hidden');warn.textContent='⚠️ Cannot pick a past date.';return;}
+  if(isTooSoon(d)){warn.classList.remove('hidden');warn.textContent='⚠️ Bookings must be at least 48 hours in advance. Please pick a later date.';return;}
   if(isDateClosed(v)){
     var ovr=DATE_OVERRIDES[v];
     var reason=ovr?'manually closed':(d.getDay()===0?'Sunday is closed':(HOLIDAYS[v]+' (Public Holiday — closed)'));
@@ -1018,6 +1048,9 @@ function pickChangeCustomQty(){
 function updateChangeReady(){
   var btn=document.getElementById('ch-submit'),warn=document.getElementById('ch-overflow-warn');
   if(!editDate||!editTime||editQty<=0){btn.disabled=true;warn.classList.add('hidden');return;}
+  // Block save when the (possibly pre-filled) date is still inside the
+  // 48-hour notice window — e.g. editing an existing near-term booking.
+  if(isTooSoon(new Date(editDate+'T00:00:00'))){btn.disabled=true;warn.classList.remove('hidden');warn.textContent='⚠️ New date must be at least 48 hours from now.';return;}
   var startH=parseInt(editTime.split(':')[0]),excludeId=editingBooking?editingBooking.id:null;
   var fits=canFit(editDate,startH,editQty,excludeId);
   if(!fits){
@@ -1030,6 +1063,7 @@ function updateChangeReady(){
 
 async function saveChangeBooking(){
   if(!editingBooking)return;
+  if(isTooSoon(new Date(editDate+'T00:00:00'))){showToast('⚠️ New date must be at least 48 hours in advance.');return;}
   var btn=document.getElementById('ch-submit');btn.disabled=true;btn.textContent='Saving…';
   var startH=parseInt(editTime.split(':')[0]),hrs=hrsNeeded(editQty),endH=startH+hrs;
   var endTime=String(endH).padStart(2,'0')+':00';
