@@ -151,7 +151,6 @@
     <span>🛒</span><span>Purchase Seedlings — Order Now</span>
   </a>
   <div class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mon&ndash;Fri 8AM&ndash;5PM &bull; Sat 8AM&ndash;12PM &bull; Sun &amp; Holidays Closed</div>
-  <div class="text-center text-[10px] font-bold text-amber-600 uppercase tracking-widest">&#9201; Bookings require at least 48 hours&rsquo; advance notice</div>
 </div>
 
 <!-- MY BOOKINGS MODAL -->
@@ -322,7 +321,9 @@ function isPast(d){var t=new Date();t.setHours(0,0,0,0);var c=new Date(d);c.setH
 // Customers must book at least MIN_LEAD_HOURS ahead — they cannot book
 // today or any slot inside the notice window. Worked at day granularity:
 // e.g. booking on the 18th → earliest selectable date is the 20th.
-var MIN_LEAD_HOURS=48;
+// DISABLED: set to 0 to turn the advance-notice rule off (today bookable
+// again). Change back to 48 to re-enable the 48-hour rule.
+var MIN_LEAD_HOURS=0;
 // Earliest bookable date = midnight of (now + lead window).
 function leadCutoffDate(){var c=new Date(Date.now()+MIN_LEAD_HOURS*3600*1000);c.setHours(0,0,0,0);return c;}
 // True when a date is still inside the notice window (too soon to book).
