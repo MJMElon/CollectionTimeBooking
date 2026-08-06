@@ -889,6 +889,13 @@ async function submitBooking(){
   };
   var {error}=await _supabase.from('shared_collection_bookings').insert([payload]);
   if(error){showToast('❌ '+error.message);btn.disabled=false;btn.textContent='📅 Confirm Booking';return;}
+  // Remember who/what was just booked so the WhatsApp share can include it.
+  // Walk-ins have no real order number (order_number holds the typed name),
+  // so only carry it when the input matched a verified AL order.
+  lastBooked={
+    customer_name:payload.customer_name,
+    order_number:verifiedOrder?(verifiedOrder.order_number||verifiedOrder.al_number||''):''
+  };
   btn.textContent='📅 Confirm Booking';closeBookingModal();
   var d=new Date(selectedDate+'T00:00:00');
   document.getElementById('success-detail').textContent=d.toLocaleDateString('en-MY',{weekday:'long',day:'2-digit',month:'short',year:'numeric'})+' — '+fmtHr(startH)+' to '+fmtHr(endH)+' ('+hrs+' hr) — '+selectedQty.toLocaleString()+' seedlings';
@@ -1099,11 +1106,18 @@ async function saveChangeBooking(){
 // ════════════════════════════════════════════════════════
 //  WHATSAPP SHARE
 // ════════════════════════════════════════════════════════
+var lastBooked=null; // {customer_name, order_number} of the booking just made
 function shareWhatsApp(){
   var ds=selectedDate,sH=parseInt(selectedTime.split(':')[0]),hrs=hrsNeeded(selectedQty),eH=sH+hrs;
   var d=new Date(ds+'T00:00:00');
   var dateStr=d.toLocaleDateString('en-MY',{weekday:'long',day:'2-digit',month:'short',year:'numeric'});
+  var who='';
+  if(lastBooked){
+    if(lastBooked.customer_name)who+='👤 Customer: '+lastBooked.customer_name+'\n';
+    if(lastBooked.order_number)who+='🧾 Order No: '+lastBooked.order_number+'\n';
+  }
   var msg='🌱 MJM Nursery Collection Booking\n\n'+
+    who+
     '📅 Date: '+dateStr+'\n'+
     '⏰ Time: '+fmtHr(sH)+' – '+fmtHr(eH)+' ('+hrs+' hr)\n'+
     '🌿 Quantity: '+selectedQty.toLocaleString()+' seedlings\n\n'+
