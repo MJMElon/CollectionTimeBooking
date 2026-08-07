@@ -274,9 +274,13 @@
 <div class="modal-overlay" id="success-modal" style="z-index:260;">
   <div class="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl text-center" onclick="event.stopPropagation()">
     <div class="text-5xl mb-4">&#9989;</div>
-    <div class="font-black text-slate-800 text-lg uppercase tracking-wide mb-2">Booking Confirmed!</div>
+    <div class="font-black text-slate-800 text-lg uppercase tracking-wide mb-2">Booking Received!</div>
     <div class="text-sm font-bold text-slate-500 mb-1" id="success-detail">&mdash;</div>
-    <div class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-6 mt-4 text-left leading-relaxed">
+    <div class="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 mt-4 text-left leading-relaxed">
+      &#9203; <b>Time booking pending to be confirmed.</b><br>
+      If no one contacts you within 24 hours, your booked time is confirmed.
+    </div>
+    <div class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-6 mt-2 text-left leading-relaxed">
       Thank you for booking with MJM Nursery. &#127793;<br>
       We look forward to seeing you!<br>
       Please arrive on time for a smooth collection.
@@ -1121,6 +1125,7 @@ function shareWhatsApp(){
     '📅 Date: '+dateStr+'\n'+
     '⏰ Time: '+fmtHr(sH)+' – '+fmtHr(eH)+' ('+hrs+' hr)\n'+
     '🌿 Quantity: '+selectedQty.toLocaleString()+' seedlings\n\n'+
+    '⏳ Time booking pending to be confirmed — if no one contacts you within 24 hours, the time is confirmed.\n\n'+
     'Please arrive on time for a smooth collection. Thank you!';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
