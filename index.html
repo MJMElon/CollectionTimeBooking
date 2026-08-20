@@ -63,7 +63,7 @@
   .qty-btn.active{border-color:#10b981;background:#10b981;color:white;box-shadow:0 4px 12px rgba(16,185,129,.3);}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#064e3b,#10b981);color:white;padding:14px 22px;border-radius:14px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 8px 24px rgba(16,185,129,.4);text-align:center;max-width:90vw;}
   .toast.show{opacity:1;}
-  .month-grid{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:white;}
+  .month-grid{display:grid;grid-template-columns:repeat(7,1fr);overflow:hidden;background:white;}
   .month-header:last-child{border-right:none;}
   .month-cell{min-height:70px;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9;padding:4px 6px;cursor:pointer;transition:background .15s;min-width:0;overflow:hidden;}
   .month-cell:nth-child(7n){border-right:none;}
@@ -72,8 +72,12 @@
   .month-cell.today{background:#ecfdf5;}
   .month-cell.past{opacity:.4;cursor:default;}.month-cell.past:hover{background:transparent;}
   .month-cell.too-soon{background:#fffbeb;cursor:default;}.month-cell.too-soon:hover{background:#fffbeb;}
-  .month-cell.closed{background:#f8f8f8;cursor:default;}.month-cell.closed:hover{background:#f8f8f8;}
-  .month-cell.holiday{background:#fef2f2;cursor:default;}.month-cell.holiday:hover{background:#fef2f2;}
+  .month-cell.closed{background:#f8f8f8;}.month-cell.closed:hover{background:#f1f5f9;}
+  .month-cell.holiday{background:#fef2f2;}.month-cell.holiday:hover{background:#fee2e2;}
+  .cal-badge{display:inline-block;font-size:9px;font-weight:900;padding:2px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.04em;margin-top:3px;}
+  .cal-open{background:#d1fae5;color:#065f46;}
+  .cal-full{background:#fef3c7;color:#92400e;}
+  .cal-closed{background:#fee2e2;color:#991b1b;}
   .month-day-num{font-size:12px;font-weight:900;color:#334155;margin-bottom:2px;}
   .month-cell.today .month-day-num{color:white;background:#10b981;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:12px;}
   .month-holiday-tag{display:block;font-size:8px;font-weight:700;color:#dc2626;line-height:1.2;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -107,7 +111,7 @@
   .purchase-btn span:first-child{font-size:16px;line-height:1;}
   /* ── CALENDAR MOBILE FIX ── */
   .month-header{background:#f8fafc;padding:8px;text-align:center;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#64748b;border-bottom:2px solid #e2e8f0;border-right:1px solid #e2e8f0;min-width:0;}
-  @media(max-width:480px){.month-header{font-size:8px;padding:6px 2px;letter-spacing:0;}.month-cell{min-height:52px;padding:3px 3px;}.month-day-num{font-size:10px;}.month-cell.today .month-day-num{width:20px;height:20px;border-radius:10px;font-size:10px;}.booked-tag,.slot-full,.slot-busy,.slot-available{font-size:7px;padding:1px 3px;}.month-holiday-tag{font-size:7px;}}
+  @media(max-width:480px){.month-header{font-size:8px;padding:6px 2px;letter-spacing:0;}.month-cell{min-height:52px;padding:3px 3px;}.month-day-num{font-size:10px;}.month-cell.today .month-day-num{width:20px;height:20px;border-radius:10px;font-size:10px;}.booked-tag,.slot-full,.slot-busy,.slot-available{font-size:7px;padding:1px 3px;}.month-holiday-tag{font-size:7px;}.cal-badge{font-size:8px;padding:1px 6px;margin-top:2px;}}
 
   /* ── WEATHER STRIP (matches operations module) ── */
   .weather-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none;}
@@ -194,12 +198,15 @@
       </div>
     </div>
   </div>
-  <div class="dash-card p-4 flex items-center justify-between">
-    <button onclick="changeMonth(-1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-emerald-100 flex items-center justify-center text-slate-500 hover:text-emerald-700 font-black text-lg cursor-pointer transition-colors border-none">&lsaquo;</button>
-    <div class="text-sm font-black text-slate-800 uppercase tracking-wide" id="month-label">&mdash;</div>
-    <button onclick="changeMonth(1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-emerald-100 flex items-center justify-center text-slate-500 hover:text-emerald-700 font-black text-lg cursor-pointer transition-colors border-none">&rsaquo;</button>
+  <div class="dash-card overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+      <button onclick="changeMonth(-1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-emerald-100 flex items-center justify-center text-slate-500 hover:text-emerald-700 font-black text-lg cursor-pointer transition-colors border-none">&lsaquo;</button>
+      <div class="text-sm font-black text-slate-800 uppercase tracking-wide" id="month-label">&mdash;</div>
+      <button onclick="changeMonth(1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-emerald-100 flex items-center justify-center text-slate-500 hover:text-emerald-700 font-black text-lg cursor-pointer transition-colors border-none">&rsaquo;</button>
+    </div>
+    <div class="overflow-x-auto"><div id="month-grid"></div></div>
+    <div id="cal-detail" class="hidden px-4 py-3 border-t border-slate-100"></div>
   </div>
-  <div class="dash-card p-0 overflow-x-auto"><div id="month-grid"></div></div>
   <a href="https://www.mjmnursery.com/" class="purchase-btn dash-card" title="Order more seedlings">
     <span>🛒</span><span>Purchase Seedlings — Order Now</span>
   </a>
@@ -551,6 +558,7 @@ function changeMonth(dir){currentMonth+=dir;if(currentMonth>11){currentMonth=0;c
 
 function renderMonth(){
   document.getElementById('month-label').textContent=MNAMES[currentMonth]+' '+currentYear;
+  var _cd=document.getElementById('cal-detail');if(_cd){_cd.classList.add('hidden');_cd.innerHTML='';}
   var el=document.getElementById('month-grid'),firstDay=new Date(currentYear,currentMonth,1);
   var startDow=firstDay.getDay();if(startDow===0)startDow=7;
   var html='<div class="month-grid">';
@@ -571,35 +579,61 @@ function renderMonth(){
       if(isTM)has=true;
       var cls='month-cell'+(isToday(cd)?' today':'')+(isPast(cd)?' past':'')+(!isTM?' other-month':'')+(closed?' closed':'')+(showHoliday?' holiday':'')+(isTM&&tooSoon?' too-soon':'');
       var inner='<div class="month-day-num">'+cd.getDate()+'</div>';
-      if(isTM&&!isPast(cd)&&closed){
-        inner+='<div style="display:inline-block;background:#fee2e2;color:#991b1b;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Closed</div>';
-      }
-      if(showHoliday)inner+='<div class="month-holiday-tag">🇲🇾 '+hol+'</div>';
-      // External remark set by operations — shown on closed days AND on
-      // admin-flagged fully-booked days so customers see the reason in
-      // both states without opening the (blocked) time modal.
-      var extNote=ovr&&ovr.external_note?String(ovr.external_note).trim():'';
-      if(isTM&&!isPast(cd)&&(closed||adminFull)&&extNote){
-        var safeNote=extNote.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        inner+='<div title="'+safeNote+'" style="font-size:8px;font-weight:700;color:#7c2d12;line-height:1.2;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+safeNote+'</div>';
-      }
-      if(isTM&&!closed&&!isPast(cd)){
-        if(tooSoon){inner+='<div style="display:inline-block;background:#fef3c7;color:#92400e;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Min 48h Notice</div>';}
-        else if(isDayFullyBooked(ds)){inner+='<div class="booked-tag">Fully Booked</div>';}
-        else{inner+='<div style="display:inline-block;background:#d1fae5;color:#065f46;font-size:8px;font-weight:900;padding:1px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;">Open</div>';}
-      }
       var click='';
-      // Admin-flagged fully-booked days are clickable-but-no-op: block
-      // the time modal entirely instead of letting the customer open it
-      // to a list of full slots (the picker UI would mislead). Days inside
-      // the 48-hour notice window are likewise non-clickable.
-      if(isTM&&!closed&&!isPast(cd)&&!adminFull&&!tooSoon)click=' onclick="openTimeModal(\''+ds+'\')"';
+      // Cells show ONLY the status word: OPEN / FULL / CLOSED. Tapping a
+      // FULL or CLOSED day reveals the reason (holiday name, operations
+      // note, "fully booked") in the detail panel below the calendar;
+      // tapping OPEN opens the time picker.
+      if(isTM&&!isPast(cd)){
+        if(closed){
+          inner+='<div class="cal-badge cal-closed">Closed</div>';
+          click=' onclick="showDayDetail(\''+ds+'\')"';
+        } else if(tooSoon){
+          inner+='<div class="cal-badge cal-full">Min 48h</div>';
+        } else if(isDayFullyBooked(ds)){
+          inner+='<div class="cal-badge cal-full">Full</div>';
+          click=' onclick="showDayDetail(\''+ds+'\')"';
+        } else {
+          inner+='<div class="cal-badge cal-open">Open</div>';
+          click=' onclick="openTimeModal(\''+ds+'\')"';
+        }
+      }
       html+='<div class="'+cls+'"'+click+'>'+inner+'</div>';
       cd.setDate(cd.getDate()+1);
     }
     if(!has&&r>4)break;
   }
   html+='</div>';el.innerHTML=html;
+}
+
+// Detail panel under the calendar — explains why a FULL / CLOSED day is
+// unavailable (holiday name, operations note, or simply fully booked).
+// Triggered by tapping a FULL or CLOSED calendar cell.
+function showDayDetail(ds){
+  var el=document.getElementById('cal-detail');
+  if(!el)return;
+  var d=new Date(ds+'T00:00:00');
+  var dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var dateStr=dn[d.getDay()]+', '+d.toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'});
+  var ovr=DATE_OVERRIDES[ds];
+  var note=ovr&&ovr.external_note?String(ovr.external_note).trim():'';
+  var title,reason,bg,bd,fg;
+  if(isDateClosed(ds)){
+    bg='#fef2f2';bd='#fecaca';fg='#991b1b';title='Closed';
+    if(HOLIDAYS[ds]&&!(ovr&&ovr.is_open)){reason='Public Holiday — '+HOLIDAYS[ds];}
+    else if(ovr&&!ovr.is_open&&note){reason=note;}
+    else if(d.getDay()===0){reason='Sundays are closed';}
+    else{reason='Not open for collection';}
+  } else if(isDayFullyBooked(ds)){
+    bg='#fffbeb';bd='#fde68a';fg='#92400e';title='Fully Booked';
+    reason=note||'All collection time slots for this day are taken.';
+  } else {
+    el.classList.add('hidden');el.innerHTML='';return;
+  }
+  el.innerHTML='<div style="background:'+bg+';border:1.5px solid '+bd+';border-radius:12px;padding:10px 14px;">'+
+    '<div style="font-size:12px;font-weight:900;color:'+fg+';">'+title+' &middot; '+dateStr+'</div>'+
+    '<div style="font-size:11px;font-weight:700;color:#64748b;margin-top:2px;">'+_bkEsc(reason)+'</div></div>';
+  el.classList.remove('hidden');
 }
 
 // ═══════════════ TIME MODAL ═══════════════
