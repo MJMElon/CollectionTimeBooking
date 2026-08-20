@@ -93,6 +93,14 @@
   .status-cancelled{background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:900;text-transform:uppercase;text-decoration:line-through;}
   .est-box{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:12px 16px;margin-top:8px;}
 
+  /* ── HOW-TO SWIPE CAROUSEL ── */
+  .howto-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .howto-carousel::-webkit-scrollbar{display:none;}
+  .howto-slide{flex:0 0 100%;scroll-snap-align:center;box-sizing:border-box;min-height:84px;display:flex;align-items:center;padding:2px;}
+  .howto-dots{display:flex;justify-content:center;gap:6px;margin-top:10px;}
+  .howto-dot{width:7px;height:7px;border-radius:9999px;background:#cbd5e1;border:none;padding:0;cursor:pointer;transition:all .25s;}
+  .howto-dot.active{background:#10b981;width:22px;}
+
   /* ── PURCHASE SEEDLINGS BUTTON ── */
   .purchase-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#c9a84c,#a08538);color:white;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:13px 20px;border-radius:16px;text-decoration:none;box-shadow:0 4px 12px rgba(201,168,76,.35);transition:transform .15s,box-shadow .15s;width:100%;box-sizing:border-box;}
   .purchase-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(201,168,76,.5);}
@@ -137,27 +145,44 @@
   <!-- HOW TO BOOK -->
   <div class="dash-card p-4 sm:p-5">
     <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">&#128203; How To Book Your Collection Slot</div>
-    <div class="space-y-3">
-      <div class="flex items-start gap-3">
-        <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">1</div>
-        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Pick a day.</span> Tap any <span class="text-emerald-700 font-black">OPEN</span> day on the calendar below.</div>
+    <div class="howto-carousel" id="howto-carousel">
+      <div class="howto-slide">
+        <div class="flex items-start gap-3">
+          <div class="shrink-0 w-8 h-8 rounded-full bg-emerald-600 text-white font-black text-sm flex items-center justify-center">1</div>
+          <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800 block mb-0.5">Pick a day</span>Tap any <span class="text-emerald-700 font-black">OPEN</span> day on the calendar below.</div>
+        </div>
       </div>
-      <div class="flex items-start gap-3">
-        <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">2</div>
-        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Choose a time.</span> Select an available collection time slot.</div>
+      <div class="howto-slide">
+        <div class="flex items-start gap-3">
+          <div class="shrink-0 w-8 h-8 rounded-full bg-emerald-600 text-white font-black text-sm flex items-center justify-center">2</div>
+          <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800 block mb-0.5">Choose a time</span>Select an available collection time slot.</div>
+        </div>
       </div>
-      <div class="flex items-start gap-3">
-        <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">3</div>
-        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Enter your order number.</span> Key in the Order No. shown on your purchase receipt.</div>
+      <div class="howto-slide">
+        <div class="flex items-start gap-3">
+          <div class="shrink-0 w-8 h-8 rounded-full bg-emerald-600 text-white font-black text-sm flex items-center justify-center">3</div>
+          <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800 block mb-0.5">Enter your order number</span>Key in the Order No. shown on your purchase receipt.</div>
+        </div>
       </div>
-      <div class="flex items-start gap-3">
-        <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">4</div>
-        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Set the quantity.</span> Choose how many seedlings you will collect.</div>
+      <div class="howto-slide">
+        <div class="flex items-start gap-3">
+          <div class="shrink-0 w-8 h-8 rounded-full bg-emerald-600 text-white font-black text-sm flex items-center justify-center">4</div>
+          <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800 block mb-0.5">Set the quantity</span>Choose how many seedlings you will collect.</div>
+        </div>
       </div>
-      <div class="flex items-start gap-3">
-        <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">5</div>
-        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Submit &amp; check status.</span> After you submit, your slot is <span class="font-black text-amber-700">Pending</span> until confirmed. Search your Order No. below to check if it has become <span class="font-black text-emerald-700">Confirmed</span>. You can also share it via WhatsApp.</div>
+      <div class="howto-slide">
+        <div class="flex items-start gap-3">
+          <div class="shrink-0 w-8 h-8 rounded-full bg-emerald-600 text-white font-black text-sm flex items-center justify-center">5</div>
+          <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800 block mb-0.5">Submit &amp; check status</span>After you submit, your slot is <span class="font-black text-amber-700">Pending</span> until confirmed. Search your Order No. below to check if it has become <span class="font-black text-emerald-700">Confirmed</span>. You can also share it via WhatsApp.</div>
+        </div>
       </div>
+    </div>
+    <div class="howto-dots" id="howto-dots">
+      <button class="howto-dot active" aria-label="Step 1" onclick="gotoHowtoSlide(0)"></button>
+      <button class="howto-dot" aria-label="Step 2" onclick="gotoHowtoSlide(1)"></button>
+      <button class="howto-dot" aria-label="Step 3" onclick="gotoHowtoSlide(2)"></button>
+      <button class="howto-dot" aria-label="Step 4" onclick="gotoHowtoSlide(3)"></button>
+      <button class="howto-dot" aria-label="Step 5" onclick="gotoHowtoSlide(4)"></button>
     </div>
 
     <!-- Remark + search: still lets customers check / change an existing booking -->
@@ -936,6 +961,25 @@ async function submitBooking(){
 }
 function closeSuccessModal(){document.getElementById('success-modal').classList.remove('open');}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000);}
+
+// ═══════════════ HOW-TO SWIPE CAROUSEL ═══════════════
+function gotoHowtoSlide(i){
+  var c=document.getElementById('howto-carousel');
+  if(c)c.scrollTo({left:i*c.clientWidth,behavior:'smooth'});
+}
+function updateHowtoDots(){
+  var c=document.getElementById('howto-carousel');
+  if(!c)return;
+  var idx=Math.round(c.scrollLeft/(c.clientWidth||1));
+  var dots=document.querySelectorAll('#howto-dots .howto-dot');
+  for(var i=0;i<dots.length;i++)dots[i].classList.toggle('active',i===idx);
+}
+window.addEventListener('DOMContentLoaded',function(){
+  var c=document.getElementById('howto-carousel');
+  if(!c)return;
+  var t=null;
+  c.addEventListener('scroll',function(){if(t)clearTimeout(t);t=setTimeout(updateHowtoDots,60);});
+});
 
 // Floating leaves
 (function(){
