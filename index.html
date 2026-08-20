@@ -156,15 +156,15 @@
       </div>
       <div class="flex items-start gap-3">
         <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">5</div>
-        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Confirm.</span> Confirm your booking &mdash; then share it via WhatsApp.</div>
+        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Submit &amp; check status.</span> After you submit, your slot is <span class="font-black text-amber-700">Pending</span> until confirmed. Search your Order No. below to check if it has become <span class="font-black text-emerald-700">Confirmed</span>. You can also share it via WhatsApp.</div>
       </div>
     </div>
 
     <!-- Remark + search: still lets customers check / change an existing booking -->
     <div class="mt-4 pt-4 border-t border-slate-100">
-      <div class="text-[10px] font-bold text-slate-500 mb-2 leading-relaxed">&#128269; <span class="font-black text-slate-600">Already booked?</span> Search your Order No. or Name to check or change your time slot.</div>
+      <div class="text-[10px] font-bold text-slate-500 mb-2 leading-relaxed">&#128269; <span class="font-black text-slate-600">Already booked?</span> Enter your Order No. to check your appointment status (<span class="font-black text-amber-700">Pending</span> or <span class="font-black text-emerald-700">Confirmed</span>) or change your time slot.</div>
       <div class="flex gap-3">
-        <input id="search-input" type="text" class="search-input flex-1" placeholder="Order No. or Name…">
+        <input id="search-input" type="text" class="search-input flex-1" placeholder="Enter your Order No.…">
         <button onclick="searchMyBookings()" class="shrink-0 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors">Search</button>
       </div>
     </div>
@@ -793,7 +793,7 @@ function validateIdentity(){
         // Order-number-only matching: no walk-in fallback. If the input
         // doesn't match an active AL, reject so the customer has to enter
         // (or paste) the actual order number from their purchase receipt
-        // / AL letter — protects against partial-name mismatches like
+        // — protects against partial-name mismatches like
         // "lee" hitting an unrelated "WANG LEE COMPANY" AL.
         status.className='text-[10px] font-bold mt-2 text-red-500';
         status.textContent='❌ Order number not found. Please enter the exact order number from your purchase receipt.';
