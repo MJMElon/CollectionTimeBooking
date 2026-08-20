@@ -148,7 +148,7 @@
       </div>
       <div class="flex items-start gap-3">
         <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">3</div>
-        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Enter your order number.</span> Key in the Order No. from your receipt or AL letter.</div>
+        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Enter your order number.</span> Key in the Order No. shown on your purchase receipt.</div>
       </div>
       <div class="flex items-start gap-3">
         <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">4</div>
@@ -796,7 +796,7 @@ function validateIdentity(){
         // / AL letter — protects against partial-name mismatches like
         // "lee" hitting an unrelated "WANG LEE COMPANY" AL.
         status.className='text-[10px] font-bold mt-2 text-red-500';
-        status.textContent='❌ Order number not found. Please enter the exact order number from your purchase receipt or AL letter.';
+        status.textContent='❌ Order number not found. Please enter the exact order number from your purchase receipt.';
         identityValid=false;
         verifiedOrder=null;
         availableQty=0;
