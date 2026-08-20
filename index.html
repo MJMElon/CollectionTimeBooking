@@ -118,12 +118,7 @@
   .weather-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none;}
   .weather-strip::-webkit-scrollbar{display:none;}
   .weather-day{flex:1 1 0;min-width:74px;background:white;border:1.5px solid #e2e8f0;border-radius:12px;padding:8px 6px;text-align:center;transition:all .2s;}
-  .weather-day.today{flex:1.6 1 0;min-width:98px;border-color:#10b981;background:#ecfdf5;box-shadow:0 6px 16px rgba(16,185,129,.20);padding:12px 8px;}
-  .weather-day.today .weather-day-icon{font-size:2rem;}
-  .weather-day.today .weather-day-temp{font-size:15px;}
-  .weather-day.today .weather-day-name{font-size:11px;}
-  .weather-day.today .weather-day-rain{font-size:11px;}
-  .weather-day.today .weather-day-desc{font-size:10px;}
+  .weather-day.today{border-color:#10b981;background:#ecfdf5;}
   .weather-day-name{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;}
   .weather-day.today .weather-day-name{color:#065f46;}
   .weather-day-icon{font-size:1.4rem;margin:3px 0 1px;line-height:1;}
@@ -146,7 +141,7 @@
   <!-- Weather Forecast -->
   <div class="dash-card p-4" id="weather-card" style="display:none;">
     <div class="flex items-center gap-2 mb-2">
-      <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 0 0 4 4h9a5 5 0 1 0-.1-9.999 5.002 5.002 0 1 0-9.78 2.096A4.001 4.001 0 0 0 3 15z"/></svg>
+      <span id="weather-title-icon" class="shrink-0" style="font-size:16px;line-height:1;" title="Today's weather">☁️</span>
       <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Miri 7-Day Weather Forecast</span>
     </div>
     <div class="weather-strip" id="weather-strip"></div>
@@ -1275,6 +1270,10 @@ async function loadWeather(){
     html+='<div class="weather-day'+(ds===todayStr?' today':'')+'"><div class="weather-day-name">'+dl+'</div><div style="font-size:8px;color:#cbd5e1;font-weight:700;">'+dd+'</div><div class="weather-day-icon">'+ic+'</div><div class="weather-day-temp">'+hi+'°/'+lo+'°</div><div class="weather-day-rain'+rc+'">💧 '+rain+'%</div><div class="weather-day-desc">'+dc+'</div></div>';
   }
   document.getElementById('weather-strip').innerHTML=html;
+  // Header icon reflects today's forecast (index 0 = today) instead of a
+  // fixed cloud — e.g. a sunny-ish today shows a sun/cloud emoji.
+  var ti=document.getElementById('weather-title-icon');
+  if(ti&&wd.weather_code&&wd.weather_code.length)ti.textContent=(_wIcons[wd.weather_code[0]]||'☁️');
   card.style.display='';
 }
 </script>
