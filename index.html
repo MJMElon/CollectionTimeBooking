@@ -134,11 +134,39 @@
     <div class="weather-strip" id="weather-strip"></div>
   </div>
 
-  <div class="dash-card p-4">
-    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">&#128269; Check My Booked Time Slot</div>
-    <div class="flex gap-3">
-      <input id="search-input" type="text" class="search-input flex-1" placeholder="Order No. or Name…">
-      <button onclick="searchMyBookings()" class="shrink-0 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors">Search</button>
+  <!-- HOW TO BOOK -->
+  <div class="dash-card p-4 sm:p-5">
+    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">&#128203; How To Book Your Collection Slot</div>
+    <div class="space-y-3">
+      <div class="flex items-start gap-3">
+        <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">1</div>
+        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Pick a day.</span> Tap any <span class="text-emerald-700 font-black">OPEN</span> day on the calendar below.</div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">2</div>
+        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Choose a time.</span> Select an available collection time slot.</div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">3</div>
+        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Enter your order number.</span> Key in the Order No. from your receipt or AL letter.</div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">4</div>
+        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Set the quantity.</span> Choose how many seedlings you will collect.</div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[11px] flex items-center justify-center mt-0.5">5</div>
+        <div class="text-sm font-bold text-slate-700 leading-snug"><span class="font-black text-slate-800">Confirm.</span> Confirm your booking &mdash; then share it via WhatsApp.</div>
+      </div>
+    </div>
+
+    <!-- Remark + search: still lets customers check / change an existing booking -->
+    <div class="mt-4 pt-4 border-t border-slate-100">
+      <div class="text-[10px] font-bold text-slate-500 mb-2 leading-relaxed">&#128269; <span class="font-black text-slate-600">Already booked?</span> Search your Order No. or Name to check or change your time slot.</div>
+      <div class="flex gap-3">
+        <input id="search-input" type="text" class="search-input flex-1" placeholder="Order No. or Name…">
+        <button onclick="searchMyBookings()" class="shrink-0 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors">Search</button>
+      </div>
     </div>
   </div>
   <div class="dash-card p-4 flex items-center justify-between">
