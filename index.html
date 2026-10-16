@@ -800,10 +800,16 @@ function _bkPickSuggestion(val){
   if(input){ input.value=val; }
   var box=document.getElementById('bk-suggest');
   if(box){ box.classList.add('hidden'); }
-  validateIdentity();
+  validateIdentity(true);
 }
 
-function validateIdentity(){
+// fromPick: true when this call is re-verifying an order the customer just
+// clicked out of the dropdown, not fresh typing. The re-query below still
+// matches that same order (it's an exact value now), so without this flag
+// the dropdown would quietly reopen itself ~600ms after being picked —
+// the suggestion list is for narrowing down what to type, not for showing
+// a one-item "menu" under an already-chosen value.
+function validateIdentity(fromPick){
   var val=document.getElementById('bk-identity').value.trim();
   var status=document.getElementById('identity-status');
   identityValid=false;
@@ -847,8 +853,10 @@ function validateIdentity(){
         .limit(5);
 
       // Show the matched ALs as a clickable dropdown so the customer can
-      // confirm or switch when several of their orders share a name.
-      _bkRenderSuggestions(als);
+      // confirm or switch when several of their orders share a name —
+      // skipped when re-verifying a value they just picked (see the
+      // fromPick comment above validateIdentity).
+      if(!fromPick) _bkRenderSuggestions(als);
 
       if(!als || als.length===0){
         identityChecking=false;
