@@ -339,7 +339,7 @@
     <div class="text-sm font-bold text-slate-500 mb-1" id="success-detail">&mdash;</div>
     <div class="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 mt-4 text-left leading-relaxed">
       &#9203; <b>Time booking pending to be confirmed.</b><br>
-      If no one contacts you within 24 hours, your booked time is confirmed.
+      Check your booking status via the search bar after 24 hours.
     </div>
     <div class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-6 mt-2 text-left leading-relaxed">
       Thank you for booking with MJM Nursery. &#127793;<br>
@@ -758,6 +758,13 @@ function updateEst(){
 var identityValid=false;
 var identityTimer=null;
 var identityChecking=false;
+// The identity value the LAST successful verify matched against. A
+// validateIdentity() call for this exact value while it's still verified
+// is a re-trigger with nothing new to decide (refocusing the field,
+// a debounced re-check resolving after the customer has already moved on
+// to quantity) and must leave the verified banner — and the dropdown it
+// already dismissed — alone rather than running the whole lookup again.
+var lastVerifiedVal=null;
 // Cached row from shared_al_orders when the input matches an existing
 // AL. Null = walk-in name path (no linked AL). Read on submit to set
 // the booking's al_number / order_number to the real values, and used
@@ -811,6 +818,7 @@ function _bkPickSuggestion(val){
 // a one-item "menu" under an already-chosen value.
 function validateIdentity(fromPick){
   var val=document.getElementById('bk-identity').value.trim();
+  if(!fromPick && identityValid && val && val===lastVerifiedVal) return;
   var status=document.getElementById('identity-status');
   identityValid=false;
   identityChecking=false;
@@ -911,6 +919,7 @@ function validateIdentity(fromPick){
         status.innerHTML='✅ Verified: <b>'+_bkEsc(al.customer_name||'')+'</b> (AL '+_bkEsc(al.al_number)+')<br>'+
           'AL balance: '+balTxt+' &middot; Already booked: '+penTxt+' &middot; <b>Available to book: '+avlTxt+' seedlings</b>';
         identityValid=true;
+        lastVerifiedVal=val;
       }
     } catch(e) {
       identityChecking=false;
@@ -1242,7 +1251,8 @@ function shareWhatsApp(){
     '📅 Date: '+dateStr+'\n'+
     '⏰ Time: '+fmtHr(sH)+' – '+fmtHr(eH)+' ('+hrs+' hr)\n'+
     '🌿 Quantity: '+selectedQty.toLocaleString()+' seedlings\n\n'+
-    '⏳ Time booking pending to be confirmed — if no one contacts you within 24 hours, the time is confirmed.\n\n'+
+    '⏳ Time booking pending to be confirmed.\n'+
+    'Check your booking status via the search bar after 24 hours.\n\n'+
     'Please arrive on time for a smooth collection. Thank you!';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
