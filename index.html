@@ -1243,15 +1243,15 @@ function shareWhatsApp(){
   var dateStr=d.toLocaleDateString('en-MY',{weekday:'long',day:'2-digit',month:'short',year:'numeric'});
   var who='';
   if(lastBooked){
-    if(lastBooked.customer_name)who+='👤 Customer: '+lastBooked.customer_name+'\n';
-    if(lastBooked.order_number)who+='🧾 Order No: '+lastBooked.order_number+'\n';
+    if(lastBooked.customer_name)who+='Customer: '+lastBooked.customer_name+'\n';
+    if(lastBooked.order_number)who+='Order No: '+lastBooked.order_number+'\n';
   }
-  var msg='🌱 MJM Nursery Collection Booking\n\n'+
+  var msg='MJM Nursery Collection Booking\n\n'+
     who+
-    '📅 Date: '+dateStr+'\n'+
-    '⏰ Time: '+fmtHr(sH)+' – '+fmtHr(eH)+' ('+hrs+' hr)\n'+
-    '🌿 Quantity: '+selectedQty.toLocaleString()+' seedlings\n\n'+
-    '⏳ Time booking pending to be confirmed.\n'+
+    'Date: '+dateStr+'\n'+
+    'Time: '+fmtHr(sH)+' – '+fmtHr(eH)+' ('+hrs+' hr)\n'+
+    'Quantity: '+selectedQty.toLocaleString()+' seedlings\n\n'+
+    'Time booking pending to be confirmed.\n'+
     'Check your booking status via the search bar after 24 hours.\n\n'+
     'Please arrive on time for a smooth collection. Thank you!';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
