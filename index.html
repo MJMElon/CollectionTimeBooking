@@ -856,14 +856,17 @@ function validateIdentity(fromPick){
       // customer_name was causing partial hits like "lee" → "WANG LEE
       // COMPANY", letting the customer book against an unrelated company's
       // AL. The order/AL identifier is the only safe key for this lookup.
-      // We still filter to ALs that are not Cancelled and have remaining
-      // balance — anything else can't be booked against by definition.
+      // We still filter to ALs that are not Cancelled or Closed and have
+      // remaining balance — anything else can't be booked against by
+      // definition. Closed means the office decided this order's business
+      // is done, same reason Cancelled is excluded — see Close AL in
+      // mjm-ai-system/operation/operation_booking.html.
       // Sorted by balance descending so the most-bookable match wins when
       // a prefix is shared across several order numbers.
       var {data:als}=await _supabase.from('shared_al_orders')
         .select('al_number,customer_name,order_number,quantity_ordered,balance_quantity,status')
         .or('order_number.ilike.%'+safe+'%,al_number.ilike.%'+safe+'%')
-        .neq('status','Cancelled')
+        .not('status', 'in', '("Cancelled","Closed")')
         .gt('balance_quantity', 0)
         .order('balance_quantity', { ascending: false })
         .limit(5);
