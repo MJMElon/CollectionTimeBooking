@@ -489,7 +489,9 @@ function dayHasBookings(ds){
 async function loadMonth(){
   var f=new Date(currentYear,currentMonth,1),l=new Date(currentYear,currentMonth+1,0);
   var results=await Promise.all([
-    _supabase.from('shared_collection_bookings').select('id,booking_date,start_time,end_time,status,collection_qty').gte('booking_date',fmtDate(f)).lte('booking_date',fmtDate(l)).neq('status','cancelled'),
+    // Taken slots only — booking_slots carries no names. The bookings
+    // table itself is closed to the public.
+    _supabase.rpc('booking_slots',{p_from:fmtDate(f),p_to:fmtDate(l)}),
     loadDateOverrides()
   ]);
   monthBookings=(results[0]&&results[0].data)||[];
@@ -532,7 +534,11 @@ async function searchMyBookings(){
   var q=document.getElementById('search-input').value.trim();
   if(q.length<2){showToast('Please enter at least 2 characters');return;}
   var todayStr=fmtDate(new Date());
-  var {data}=await _supabase.from('shared_collection_bookings').select('id,booking_date,start_time,end_time,customer_name,order_number,collection_qty,status,notes').or('order_number.ilike.%'+q+'%,customer_name.ilike.%'+q+'%').gte('booking_date',todayStr).order('booking_date',{ascending:true}).order('start_time',{ascending:true}).limit(20);
+  // The EXACT order number, never part of a name: a partial search listed
+  // other customers' bookings to anybody who typed a letter. The name that
+  // comes back is masked.
+  var res=await _supabase.rpc('booking_find_mine',{p_ref:q});
+  var data=(res.data||[]).map(function(r){ r.customer_name=r.customer_masked; return r; });
   searchedBookings=data||[];
   var el=document.getElementById('my-bk-content');
   if(!data||!data.length){
@@ -863,13 +869,15 @@ function validateIdentity(fromPick){
       // mjm-ai-system/operation/operation_booking.html.
       // Sorted by balance descending so the most-bookable match wins when
       // a prefix is shared across several order numbers.
-      var {data:als}=await _supabase.from('shared_al_orders')
-        .select('al_number,customer_name,order_number,quantity_ordered,balance_quantity,status')
-        .or('order_number.ilike.%'+safe+'%,al_number.ilike.%'+safe+'%')
-        .not('status', 'in', '("Cancelled","Closed")')
-        .gt('balance_quantity', 0)
-        .order('balance_quantity', { ascending: false })
-        .limit(5);
+      // One AL, by its EXACT order number or AL number. The AL table is
+      // closed to the public; booking_lookup_al answers with the customer
+      // name masked and how much is already booked against it.
+      var lk=await _supabase.rpc('booking_lookup_al',{p_ref:val});
+      if(lk.error) throw lk.error;
+      var als=(lk.data||[]).filter(function(r){ return r.bookable; }).map(function(r){
+        return { al_number:r.al_number, order_number:r.order_number, customer_name:r.customer_masked,
+                 balance_quantity:r.balance_quantity, booked_quantity:r.booked_quantity };
+      });
 
       // Show the matched ALs as a clickable dropdown so the customer can
       // confirm or switch when several of their orders share a name —
@@ -907,13 +915,7 @@ function validateIdentity(fromPick){
       var todayStr = today.getFullYear() + '-' +
         String(today.getMonth() + 1).padStart(2, '0') + '-' +
         String(today.getDate()).padStart(2, '0');
-      var {data:bks}=await _supabase.from('shared_collection_bookings')
-        .select('collection_qty,status,booking_date')
-        .eq('al_number', al.al_number)
-        .in('status', ['pending','booked'])
-        .gte('booking_date', todayStr);
-
-      var pendingSum=(bks||[]).reduce(function(s,b){return s+(b.collection_qty||0);},0);
+      var pendingSum=al.booked_quantity||0;
       availableQty=Math.max(0, (al.balance_quantity||0) - pendingSum);
 
       identityChecking=false;
@@ -967,55 +969,31 @@ async function submitBooking(){
   var identity=document.getElementById('bk-identity').value.trim();
   var remark=document.getElementById('bk-remark').value.trim();
 
-  // Race-safety: another customer may have booked against the same AL
-  // between the verify step and this submit. Re-check availableQty so
-  // a slot can't be over-committed.
-  if(verifiedOrder){
-    var _todayD = new Date();
-    var _todayStr = _todayD.getFullYear() + '-' +
-      String(_todayD.getMonth() + 1).padStart(2, '0') + '-' +
-      String(_todayD.getDate()).padStart(2, '0');
-    var {data:bks}=await _supabase.from('shared_collection_bookings')
-      .select('collection_qty,status,booking_date')
-      .eq('al_number', verifiedOrder.al_number)
-      .in('status', ['pending','booked'])
-      .gte('booking_date', _todayStr);
-    var pendingSum=(bks||[]).reduce(function(s,b){return s+(b.collection_qty||0);},0);
-    var nowAvailable=Math.max(0, (verifiedOrder.balance_quantity||0) - pendingSum);
-    if(selectedQty>nowAvailable){
-      availableQty=nowAvailable;
-      var status=document.getElementById('identity-status');
-      status.className='text-[10px] font-bold mt-2 text-red-500';
-      status.innerHTML='⚠️ Only <b>'+nowAvailable.toLocaleString()+'</b> seedlings available now — another booking was just made. Reduce your quantity and try again.';
-      btn.disabled=false;btn.textContent='📅 Confirm Booking';
-      return;
-    }
-  }
+  // Race-safety lives in the database now: booking_create refuses more
+  // than the order has left at the moment it books, and says how many.
 
   var startH=parseInt(selectedTime.split(':')[0]),hrs=hrsNeeded(selectedQty),endH=startH+hrs;
-  // When the input matched a real order (verifiedOrder set by
-  // checkIdentity), pin al_number / order_number / customer_name to
-  // the canonical values from shared_al_orders so the customer
-  // portal's order detail can find this booking by order_number.
-  // Walk-in name flow falls back to 'PENDING' + the raw input.
-  var payload={
-    booking_date:selectedDate,
-    start_time:selectedTime,
-    end_time:String(endH).padStart(2,'0')+':00',
-    al_number:    verifiedOrder ? verifiedOrder.al_number    : 'PENDING',
-    order_number: verifiedOrder ? verifiedOrder.order_number : identity,
-    customer_name:verifiedOrder ? (verifiedOrder.customer_name||identity) : identity,
-    collection_qty:selectedQty,
-    status:'pending',
-    notes:remark||'Customer self-booking ('+hrs+' hr)'
-  };
-  var {error}=await _supabase.from('shared_collection_bookings').insert([payload]);
+  // The database books it: it finds the order again from what was typed,
+  // fills in the real customer name itself, and refuses more than is left.
+  // This page no longer sends a name or an AL number of its own.
+  var res=await _supabase.rpc('booking_create',{
+    p_ref:identity, p_walkin_name:null,
+    p_date:selectedDate, p_start:selectedTime, p_end:String(endH).padStart(2,'0')+':00',
+    p_qty:selectedQty, p_notes:remark||'Customer self-booking ('+hrs+' hr)'
+  });
+  var error=res.error;
+  var made=(res.data&&res.data[0])||null;
+  if(error && /left to book/i.test(error.message||'')){
+    var _st=document.getElementById('identity-status');
+    _st.className='text-[10px] font-bold mt-2 text-red-500';
+    _st.textContent='⚠️ '+error.message+' — another booking was just made. Reduce your quantity and try again.';
+  }
   if(error){showToast('❌ '+error.message);btn.disabled=false;btn.textContent='📅 Confirm Booking';return;}
   // Remember who/what was just booked so the WhatsApp share can include it.
   // Walk-ins have no real order number (order_number holds the typed name),
   // so only carry it when the input matched a verified AL order.
   lastBooked={
-    customer_name:payload.customer_name,
+    customer_name:made?made.customer_masked:identity,
     order_number:verifiedOrder?(verifiedOrder.order_number||verifiedOrder.al_number||''):''
   };
   btn.textContent='📅 Confirm Booking';closeBookingModal();
