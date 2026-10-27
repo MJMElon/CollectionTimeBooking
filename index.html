@@ -720,7 +720,7 @@ function backToTimeSlots(){closeBookingModal();openTimeModal(selectedDate);}
 function pickQty(q){
   // Per-AL availability cap: (balance - already pending bookings).
   if(verifiedOrder && availableQty>0 && q>availableQty){
-    showToast('⚠️ You can only book up to '+availableQty.toLocaleString()+' seedlings (AL availability).');
+    showToast('⚠️ You can only book up to '+availableQty.toLocaleString()+' seedlings (available on your order).');
     q=availableQty;
   }
   selectedQty=q;document.getElementById('bk-custom-qty').value='';
@@ -732,7 +732,7 @@ function pickQty(q){
 function pickCustomQty(){
   var v=parseInt(document.getElementById('bk-custom-qty').value)||0;
   if(verifiedOrder && availableQty>0 && v>availableQty){
-    showToast('⚠️ You can only book up to '+availableQty.toLocaleString()+' seedlings (AL availability).');
+    showToast('⚠️ You can only book up to '+availableQty.toLocaleString()+' seedlings (available on your order).');
     v=availableQty;
     document.getElementById('bk-custom-qty').value=v;
   }
@@ -759,7 +759,7 @@ function updateEst(){
   // for the same AL. Walk-in name path has no cap (verifiedOrder is null).
   if(verifiedOrder && selectedQty>availableQty){
     warn.classList.remove('hidden');
-    warn.textContent='⚠️ Quantity ('+selectedQty.toLocaleString()+') exceeds your AL availability of '+availableQty.toLocaleString()+' seedlings (balance minus already-pending bookings). Please reduce.';
+    warn.textContent='⚠️ Quantity ('+selectedQty.toLocaleString()+') exceeds what is available on your order, '+availableQty.toLocaleString()+' seedlings (balance minus already-pending bookings). Please reduce.';
     return;
   }
   if(endH>cl){warn.classList.remove('hidden');warn.textContent='⚠️ Exceeds closing time ('+fmtHr(cl)+'). Reduce quantity or pick an earlier slot.';return;}
@@ -803,13 +803,12 @@ function _bkRenderSuggestions(als){
     var al=als[i];
     var name=_bkEsc(al.customer_name||'(unnamed)');
     var ord=_bkEsc(al.order_number||al.al_number||'');
-    var aln=_bkEsc(al.al_number||'');
     var bal=(al.balance_quantity||0).toLocaleString();
     html += '<div onmousedown="event.preventDefault();_bkPickSuggestion(\''+_bkEsc(al.order_number||al.al_number||'').replace(/\'/g,"\\'")+'\')" '+
       'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:13px;" '+
       'onmouseover="this.style.background=\'#f0fdf4\';" onmouseout="this.style.background=\'\';">'+
       '<div style="font-weight:700;color:#0f172a;">'+name+'</div>'+
-      '<div style="font-size:11px;color:#64748b;margin-top:2px;">AL '+aln+' &middot; Order '+ord+' &middot; Balance: <b style="color:#047857;">'+bal+'</b> seedlings</div>'+
+      '<div style="font-size:11px;color:#64748b;margin-top:2px;">Order '+ord+' &middot; Balance: <b style="color:#047857;">'+bal+'</b> seedlings</div>'+
     '</div>';
   }
   box.innerHTML=html;
@@ -924,13 +923,13 @@ function validateIdentity(fromPick){
       var avlTxt=availableQty.toLocaleString();
       if(availableQty<=0){
         status.className='text-[10px] font-bold mt-2 text-red-500';
-        status.innerHTML='⚠️ Verified: <b>'+_bkEsc(al.customer_name||'')+'</b> (AL '+_bkEsc(al.al_number)+')<br>'+
+        status.innerHTML='⚠️ Verified: <b>'+_bkEsc(al.customer_name||'')+'</b><br>'+
           'Fully booked: '+balTxt+' balance with '+penTxt+' already pending. Wait for a pending booking to complete or cancel before booking again.';
         identityValid=false;
       } else {
         status.className='text-[10px] font-bold mt-2 text-emerald-700';
-        status.innerHTML='✅ Verified: <b>'+_bkEsc(al.customer_name||'')+'</b> (AL '+_bkEsc(al.al_number)+')<br>'+
-          'AL balance: '+balTxt+' &middot; Already booked: '+penTxt+' &middot; <b>Available to book: '+avlTxt+' seedlings</b>';
+        status.innerHTML='✅ Verified: <b>'+_bkEsc(al.customer_name||'')+'</b><br>'+
+          'Balance: '+balTxt+' &middot; Already booked: '+penTxt+' &middot; <b>Available to book: '+avlTxt+' seedlings</b>';
         identityValid=true;
         lastVerifiedVal=val;
       }
