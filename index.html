@@ -199,6 +199,12 @@
       </div>
     </div>
   </div>
+  <div id="prefill-banner" class="hidden dash-card px-4 py-3 border border-emerald-200" style="background:#ecfdf5;">
+    <div class="flex items-center justify-between gap-3">
+      <div class="text-[11px] font-bold text-emerald-800 leading-snug">&#128197; Booking for order <b id="prefill-ref"></b><br><span class="text-emerald-700">Pick an <b>OPEN</b> day below, then choose a time.</span></div>
+      <button onclick="clearPrefill()" title="Cancel" class="w-8 h-8 rounded-lg bg-white hover:bg-emerald-100 text-emerald-800 font-black flex items-center justify-center border border-emerald-200 cursor-pointer shrink-0">&times;</button>
+    </div>
+  </div>
   <div class="dash-card overflow-hidden">
     <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
       <button onclick="changeMonth(-1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-emerald-100 flex items-center justify-center text-slate-500 hover:text-emerald-700 font-black text-lg cursor-pointer transition-colors border-none">&lsaquo;</button>
@@ -537,14 +543,26 @@ async function searchMyBookings(){
   // The EXACT order number, never part of a name: a partial search listed
   // other customers' bookings to anybody who typed a letter. The name that
   // comes back is masked.
-  var res=await _supabase.rpc('booking_find_mine',{p_ref:q});
+  // Both questions at once: what is already booked on this order, and is
+  // the order real with seedlings still left to book. The second decides
+  // whether the customer is offered the booking button.
+  var both=await Promise.all([
+    _supabase.rpc('booking_find_mine',{p_ref:q}),
+    _supabase.rpc('booking_lookup_al',{p_ref:q})
+  ]);
+  var res=both[0];
   var data=(res.data||[]).map(function(r){ r.customer_name=r.customer_masked; return r; });
+  var order=((both[1]&&both[1].data)||[])[0]||null;
+  var leftToBook=order&&order.bookable?Math.max((order.balance_quantity||0)-(order.booked_quantity||0),0):0;
   searchedBookings=data||[];
+  searchedRef=order?(order.order_number||order.al_number||q):null;
   var el=document.getElementById('my-bk-content');
-  if(!data||!data.length){
-    el.innerHTML='<div class="text-center py-8"><div class="text-3xl mb-2">📋</div><div class="text-[11px] font-black text-slate-300 uppercase tracking-widest">No bookings found</div></div>';
+  document.getElementById('my-bk-title').textContent=(data[0]&&data[0].customer_name)||(order&&order.customer_masked)||q;
+  if(!data.length&&!order){
+    el.innerHTML='<div class="text-center py-8"><div class="text-3xl mb-2">🔎</div><div class="text-[11px] font-black text-slate-500 uppercase tracking-widest">Order number not found</div><div class="text-[11px] font-bold text-slate-400 mt-2">Please check the Order No. on your purchase receipt.</div></div>';
+  } else if(!data.length){
+    el.innerHTML='<div class="text-center py-6"><div class="text-3xl mb-2">📋</div><div class="text-[11px] font-black text-slate-300 uppercase tracking-widest">No bookings found</div></div>'+_bookMoreHtml(leftToBook);
   } else {
-    document.getElementById('my-bk-title').textContent=data[0].customer_name||q;
     // Date / time / duration used to be three of six side-by-side columns,
     // which only fit a phone screen behind a horizontal scroll. They are
     // one thing a customer reads together ("when"), so they're now one
@@ -561,9 +579,31 @@ async function searchMyBookings(){
         '<div class="text-[10px] text-slate-400">(Duration: '+(eH-sH)+' hr)</div>';
       html+='<tr><td>'+whenCell+'</td><td class="font-black text-emerald-700">'+(b.collection_qty||0).toLocaleString()+'</td><td><span class="'+(b.status==='cancelled'?'status-cancelled':b.status==='pending'?'status-pending':'status-booked')+'">'+(b.status==='cancelled'?'Cancelled':b.status==='pending'?'Pending':'Confirmed')+'</span></td><td>'+changeBtn+'</td></tr>';
     });
-    html+='</tbody></table></div>';el.innerHTML=html;
+    html+='</tbody></table></div>';el.innerHTML=html+(order?_bookMoreHtml(leftToBook):'');
   }
   document.getElementById('my-bookings-modal').classList.add('open');
+}
+// The order the customer searched, carried into the booking form so they
+// do not key it a second time. Set only from a search that found the order.
+var searchedRef=null;
+var prefillRef=null;
+function _bookMoreHtml(left){
+  if(left<=0)return '<div class="text-center text-[11px] font-bold text-slate-400 mt-4">Nothing left to book on this order.</div>';
+  return '<button onclick="startBookingForSearched()" class="w-full mt-4 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] uppercase tracking-widest rounded-xl border-none cursor-pointer transition-colors">📅 Click here to book a seedling collection time</button>'+
+    '<div class="text-center text-[10px] font-bold text-slate-400 mt-2">'+left.toLocaleString()+' seedlings left to book on this order</div>';
+}
+function startBookingForSearched(){
+  if(!searchedRef)return;
+  prefillRef=searchedRef;
+  closeMyBookings();
+  var bn=document.getElementById('prefill-banner');
+  document.getElementById('prefill-ref').textContent=prefillRef;
+  bn.classList.remove('hidden');
+  bn.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function clearPrefill(){
+  prefillRef=null;
+  document.getElementById('prefill-banner').classList.add('hidden');
 }
 function closeMyBookings(){document.getElementById('my-bookings-modal').classList.remove('open');}
 document.getElementById('search-input').addEventListener('keydown',function(e){if(e.key==='Enter')searchMyBookings();});
@@ -710,8 +750,16 @@ function pickTime(ts,cap){
   document.getElementById('bk-submit').disabled=true;
   document.querySelectorAll('.cq-btn').forEach(function(b){b.classList.remove('active');});
 
+  var idIn=document.getElementById('bk-identity');
+  idIn.readOnly=!!prefillRef;
+  idIn.style.background=prefillRef?'#f1f5f9':'';
   document.getElementById('booking-modal').classList.add('open');
-  setTimeout(function(){document.getElementById('bk-identity').focus();},200);
+  if(prefillRef){
+    idIn.value=prefillRef;
+    validateIdentity(true);
+  } else {
+    setTimeout(function(){idIn.focus();},200);
+  }
 }
 function closeBookingModal(){document.getElementById('booking-modal').classList.remove('open');}
 function backToTimeSlots(){closeBookingModal();openTimeModal(selectedDate);}
@@ -999,6 +1047,7 @@ async function submitBooking(){
   var d=new Date(selectedDate+'T00:00:00');
   document.getElementById('success-detail').textContent=d.toLocaleDateString('en-MY',{weekday:'long',day:'2-digit',month:'short',year:'numeric'})+' — '+fmtHr(startH)+' to '+fmtHr(endH)+' ('+hrs+' hr) — '+selectedQty.toLocaleString()+' seedlings';
   document.getElementById('success-modal').classList.add('open');
+  clearPrefill();
   await loadMonth();renderMonth();
 }
 function closeSuccessModal(){document.getElementById('success-modal').classList.remove('open');}
