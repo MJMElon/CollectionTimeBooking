@@ -217,7 +217,7 @@
   <a href="https://www.mjmnursery.com/" class="purchase-btn dash-card" title="Order more seedlings">
     <span>🛒</span><span>Purchase Seedlings — Order Now</span>
   </a>
-  <div class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mon&ndash;Fri 8AM&ndash;5PM &bull; Sat 8AM&ndash;12PM &bull; Sun &amp; Holidays Closed</div>
+  <div class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="hours-note">Mon&ndash;Fri 8AM&ndash;5PM &bull; Sat 8AM&ndash;12PM &bull; Sun &amp; Holidays Closed</div>
 </div>
 
 <!-- MY BOOKINGS MODAL -->
@@ -377,6 +377,45 @@ var HRS_WD=[8,9,10,11,12,13,14,15,16];var HRS_SAT=[8,9,10,11];
 var HOLIDAYS={'2026-01-01':'New Year','2026-01-14':'Nuzul Al-Quran','2026-01-29':'Thaipusam','2026-02-01':'FT Day','2026-02-17':'CNY','2026-02-18':'CNY','2026-03-28':'Hari Raya Aidilfitri','2026-03-29':'Hari Raya Aidilfitri','2026-05-01':'Labour Day','2026-05-11':'Vesak Day','2026-06-01':'Agong Birthday','2026-06-04':'Hari Raya Haji','2026-06-05':'Hari Raya Haji','2026-06-25':'Awal Muharram','2026-08-31':'Merdeka Day','2026-09-03':'Maulidur Rasul','2026-09-16':'Malaysia Day','2026-10-20':'Deepavali','2026-12-25':'Christmas'};
 var DATE_OVERRIDES={};
 
+/* COLLECTION TIME SLOTS come from the office: Seedling Stock Management ->
+   System Settings -> Collection Time Slot, the one row of
+   shared_collection_slot_settings. This is a COPY of the rule in
+   mjm-ai-system shared/shared_collection_slots.js (that site cannot be
+   imported from here) - change one, change the other.
+   - An unreadable or absent row keeps the hours written below, which are
+     what this page always had.
+   - LUNCH is taken out of every open day, a date override included, and a
+     booking may not run into it: one booking is one lorry loaded straight
+     through. */
+var SLOTS={weekday_open:8,weekday_close:17,sat_open:8,sat_close:12,lunch_start:null,lunch_end:null};
+function _intIn(v,lo,hi){var n=Number(v);return(v!==null&&v!==''&&isFinite(n)&&Math.floor(n)===n&&n>=lo&&n<=hi)?n:null;}
+function _fillRange(arr,a,b){arr.length=0;for(var h=a;h<b;h++)arr.push(h);}
+async function loadSlotSettings(){
+  try{
+    var r=await _supabase.from('shared_collection_slot_settings').select('*').eq('id',1).maybeSingle();
+    var row=r&&r.data;if(!row)return;
+    var wo=_intIn(row.weekday_open,0,23),wc=_intIn(row.weekday_close,1,24),so=_intIn(row.sat_open,0,23),sc=_intIn(row.sat_close,1,24);
+    if(wo===null||wc===null||wc<=wo||so===null||sc===null||sc<=so)return;
+    SLOTS.weekday_open=wo;SLOTS.weekday_close=wc;SLOTS.sat_open=so;SLOTS.sat_close=sc;
+    var ls=_intIn(row.lunch_start,0,23),le=_intIn(row.lunch_end,1,24);
+    if(ls!==null&&le!==null&&le>ls){SLOTS.lunch_start=ls;SLOTS.lunch_end=le;}else{SLOTS.lunch_start=null;SLOTS.lunch_end=null;}
+    if(Number(row.rate_per_hour)>0)RATE=Number(row.rate_per_hour);
+    if(Number(row.max_load_per_hour)>0)MAX_LOAD=Number(row.max_load_per_hour);
+    _fillRange(HRS_WD,wo,wc);_fillRange(HRS_SAT,so,sc);
+    renderHoursNote();
+  }catch(e){console.error('loadSlotSettings:',e);}
+}
+function hasLunch(){return SLOTS.lunch_start!==null&&SLOTS.lunch_end!==null;}
+function isLunch(h){return hasLunch()&&h>=SLOTS.lunch_start&&h<SLOTS.lunch_end;}
+function crossesLunch(startH,endH){return hasLunch()&&startH<SLOTS.lunch_end&&endH>SLOTS.lunch_start;}
+function renderHoursNote(){
+  var el=document.getElementById('hours-note');if(!el)return;
+  var t='Mon\u2013Fri '+fmtHr(SLOTS.weekday_open).replace(' ','')+'\u2013'+fmtHr(SLOTS.weekday_close).replace(' ','')+
+        ' \u2022 Sat '+fmtHr(SLOTS.sat_open).replace(' ','')+'\u2013'+fmtHr(SLOTS.sat_close).replace(' ','');
+  if(hasLunch())t+=' \u2022 Lunch '+fmtHr(SLOTS.lunch_start).replace(' ','')+'\u2013'+fmtHr(SLOTS.lunch_end).replace(' ','');
+  el.textContent=t+' \u2022 Sun & Holidays Closed';
+}
+
 async function loadDateOverrides(){
   try{
     var {data}=await _supabase.from('shared_date_overrides').select('*');
@@ -414,8 +453,9 @@ function isDateClosed(ds){
   return d.getDay()===0||!!HOLIDAYS[ds];
 }
 
-// Override-aware: returns array of bookable hours for this date
-function getHoursFor(ds){
+// Override-aware: every hour the day is open, lunch included (drawn as a
+// Lunch break row), and getHoursFor - the hours that can be BOOKED.
+function dayHoursFor(ds){
   var ovr=DATE_OVERRIDES[ds];
   if(ovr){
     if(!ovr.is_open) return [];
@@ -424,14 +464,16 @@ function getHoursFor(ds){
   }
   var d=new Date(ds+'T00:00:00'),dow=d.getDay();
   if(dow===0||HOLIDAYS[ds]) return [];
-  return dow===6?HRS_SAT:HRS_WD;
+  return (dow===6?HRS_SAT:HRS_WD).slice();
 }
+function getHoursFor(ds){return dayHoursFor(ds).filter(function(h){return !isLunch(h);});}
 
 function closing(ds){
   var ovr=DATE_OVERRIDES[ds];
   if(ovr&&ovr.is_open&&ovr.close_hour) return ovr.close_hour;
-  return new Date(ds+'T00:00:00').getDay()===6?12:17;
+  return new Date(ds+'T00:00:00').getDay()===6?SLOTS.sat_close:SLOTS.weekday_close;
 }
+var LUNCH_ROW='<div class="time-slot-row full-slot lunch-slot" data-lunch="1"><div class="text-sm font-black text-slate-400">LBL</div><span class="slot-full">Lunch break</span></div>';
 
 function getHourLoad(ds,h,excludeId){
   var total=0;
@@ -452,7 +494,7 @@ function maxBookableQty(ds,startH,excludeId){
   var best=0;
   for(var tryQty=50;tryQty<=5000;tryQty+=50){
     var hrs=hrsNeeded(tryQty),endH=startH+hrs;
-    if(endH>cl)break;
+    if(endH>cl||crossesLunch(startH,endH))break;
     var ld=hrLoad(tryQty),ok=true;
     for(var h=startH;h<endH;h++){if(getHourLoad(ds,h,excludeId)+ld>MAX_LOAD){ok=false;break;}}
     if(ok)best=tryQty;else break;
@@ -462,7 +504,7 @@ function maxBookableQty(ds,startH,excludeId){
 
 function canFit(ds,startH,qty,excludeId){
   var hrs=hrsNeeded(qty),endH=startH+hrs,cl=closing(ds);
-  if(endH>cl)return false;
+  if(endH>cl||crossesLunch(startH,endH))return false;
   var ld=hrLoad(qty);
   for(var h=startH;h<endH;h++){if(getHourLoad(ds,h,excludeId)+ld>MAX_LOAD)return false;}
   return true;
@@ -506,7 +548,7 @@ window.addEventListener('DOMContentLoaded',function(){
   // Render calendar shell immediately so the user sees something instantly,
   // then load bookings + overrides in the background and re-render once they arrive.
   renderMonth();
-  Promise.all([loadMonth(),loadDateOverrides()]).then(function(){renderMonth();});
+  Promise.all([loadMonth(),loadDateOverrides(),loadSlotSettings()]).then(function(){renderMonth();});
   loadWeather();
   // Deep-link entry: ?search=<order or name>[&edit=<bookingId>] pre-fills
   // the search box and runs it. Used by the salesweb customer portal's
@@ -706,10 +748,11 @@ function openTimeModal(ds){
   var d=new Date(ds+'T00:00:00');
   var dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   document.getElementById('tm-date-label').textContent=dn[d.getDay()]+', '+d.toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'});
-  var hours=getHoursFor(ds);
+  var hours=dayHoursFor(ds);
 
   var html='';
   hours.forEach(function(h){
+    if(isLunch(h)){html+=LUNCH_ROW.replace('LBL',slotLbl(h));return;}
     var load=getHourLoad(ds,h),rem=Math.round(remaining(ds,h));
     var ts=String(h).padStart(2,'0')+':00';
     var maxQty=maxBookableQty(ds,h);
@@ -811,6 +854,7 @@ function updateEst(){
     return;
   }
   if(endH>cl){warn.classList.remove('hidden');warn.textContent='⚠️ Exceeds closing time ('+fmtHr(cl)+'). Reduce quantity or pick an earlier slot.';return;}
+  if(crossesLunch(startH,endH)){warn.classList.remove('hidden');warn.textContent='⚠️ Runs into lunch break ('+fmtHr(SLOTS.lunch_start)+' to '+fmtHr(SLOTS.lunch_end)+'). Reduce quantity or pick another time slot.';return;}
   if(!canFit(selectedDate,startH,selectedQty)){
     warn.classList.remove('hidden');
     warn.textContent='⚠️ Choose quantity '+slotCapacity.toLocaleString()+' or below, or select another time slot.';
@@ -1180,10 +1224,11 @@ function onChangeDateChange(){
 
 function renderChangeSlots(){
   if(!editDate)return;
-  var hours=getHoursFor(editDate);
+  var hours=dayHoursFor(editDate);
   var excludeId=editingBooking?editingBooking.id:null;
   var html='';
   hours.forEach(function(h){
+    if(isLunch(h)){html+=LUNCH_ROW.replace('LBL',slotLbl(h));return;}
     var ts=String(h).padStart(2,'0')+':00';
     var maxQty=maxBookableQty(editDate,h,excludeId);
     var load=getHourLoad(editDate,h,excludeId);
