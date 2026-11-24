@@ -768,6 +768,15 @@ var verifiedOrder=null;
 // time the AL is resolved and re-checked at submit time.
 var availableQty=0;
 
+// Server-side availability per AL → {AL: {al_balance, booked, available}}.
+async function fetchAvailability(alNumbers){
+  var out={};
+  var {data,error}=await _supabase.rpc('get_al_availability',{_als:alNumbers});
+  if(error)throw error;
+  (data||[]).forEach(function(r){out[r.al_number]={al_balance:Number(r.al_balance)||0,booked:Number(r.booked)||0,available:Number(r.available)||0};});
+  return out;
+}
+
 function _bkEsc(s){return String(s||'').replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
 
 // Render up to 5 matching ALs as a clickable suggestion dropdown below the
@@ -783,12 +792,12 @@ function _bkRenderSuggestions(als){
     var name=_bkEsc(al.customer_name||'(unnamed)');
     var ord=_bkEsc(al.order_number||al.al_number||'');
     var aln=_bkEsc(al.al_number||'');
-    var bal=(al.balance_quantity||0).toLocaleString();
+    var bal=(al._avail!=null?al._avail:(al.balance_quantity||0)).toLocaleString();
     html += '<div onmousedown="event.preventDefault();_bkPickSuggestion(\''+_bkEsc(al.order_number||al.al_number||'').replace(/\'/g,"\\'")+'\')" '+
       'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:13px;" '+
       'onmouseover="this.style.background=\'#f0fdf4\';" onmouseout="this.style.background=\'\';">'+
       '<div style="font-weight:700;color:#0f172a;">'+name+'</div>'+
-      '<div style="font-size:11px;color:#64748b;margin-top:2px;">AL '+aln+' &middot; Order '+ord+' &middot; Balance: <b style="color:#047857;">'+bal+'</b> seedlings</div>'+
+      '<div style="font-size:11px;color:#64748b;margin-top:2px;">AL '+aln+' &middot; Order '+ord+' &middot; Available: <b style="color:#047857;">'+bal+'</b> seedlings</div>'+
     '</div>';
   }
   box.innerHTML=html;
@@ -848,6 +857,13 @@ function validateIdentity(){
 
       // Show the matched ALs as a clickable dropdown so the customer can
       // confirm or switch when several of their orders share a name.
+      // Show "available to book" (not the raw AL field) and pick the most
+      // bookable match first.
+      if(als && als.length){
+        var avs=await fetchAvailability(als.map(function(a){return a.al_number;}));
+        als.forEach(function(a){a._avail=(avs[a.al_number]||{available:0}).available;});
+        als.sort(function(x,y){return y._avail-x._avail;});
+      }
       _bkRenderSuggestions(als);
 
       if(!als || als.length===0){
@@ -869,34 +885,25 @@ function validateIdentity(){
       var al=als[0];
       verifiedOrder=al;
 
-      // Sum already-active bookings for this AL (pending or booked).
-      // Completed bookings are excluded because the qty would already be
-      // deducted from balance_quantity when the DO is issued; cancelled
-      // bookings are excluded because the slot was released. Past-dated
-      // bookings are also excluded — once the booking date passes the slot
-      // has either been collected (and reflected via a DO) or no-showed,
-      // either way it shouldn't keep blocking the customer's future quota.
-      var today = new Date();
-      var todayStr = today.getFullYear() + '-' +
-        String(today.getMonth() + 1).padStart(2, '0') + '-' +
-        String(today.getDate()).padStart(2, '0');
-      var {data:bks}=await _supabase.from('shared_collection_bookings')
-        .select('collection_qty,status,booking_date')
-        .eq('al_number', al.al_number)
-        .in('status', ['pending','booked'])
-        .gte('booking_date', todayStr);
-
-      var pendingSum=(bks||[]).reduce(function(s,b){return s+(b.collection_qty||0);},0);
-      availableQty=Math.max(0, (al.balance_quantity||0) - pendingSum);
+      // Availability comes from the server (get_al_availability) so the page
+      // and the DB booking guard always agree:
+      //   AL balance = AL balance net of DOs already issued
+      //   minus bookings dated today+ that haven't been collected yet.
+      // A past booking with no DO (no-show) is released back automatically.
+      var av=(await fetchAvailability([al.al_number]))[al.al_number]||{al_balance:0,booked:0,available:0};
+      var pendingSum=av.booked;
+      availableQty=av.available;
 
       identityChecking=false;
-      var balTxt=(al.balance_quantity||0).toLocaleString();
+      var balTxt=av.al_balance.toLocaleString();
       var penTxt=pendingSum.toLocaleString();
       var avlTxt=availableQty.toLocaleString();
       if(availableQty<=0){
         status.className='text-[10px] font-bold mt-2 text-red-500';
         status.innerHTML='⚠️ Verified: <b>'+_bkEsc(al.customer_name||'')+'</b> (AL '+_bkEsc(al.al_number)+')<br>'+
-          'Fully booked: '+balTxt+' balance with '+penTxt+' already pending. Wait for a pending booking to complete or cancel before booking again.';
+          (av.al_balance<=0
+            ? 'No seedlings left to collect on this order (balance 0).'
+            : 'Fully booked: AL balance '+balTxt+', already booked '+penTxt+'. You can book again after that collection date passes or the booking is cancelled.');
         identityValid=false;
       } else {
         status.className='text-[10px] font-bold mt-2 text-emerald-700';
@@ -943,17 +950,8 @@ async function submitBooking(){
   // between the verify step and this submit. Re-check availableQty so
   // a slot can't be over-committed.
   if(verifiedOrder){
-    var _todayD = new Date();
-    var _todayStr = _todayD.getFullYear() + '-' +
-      String(_todayD.getMonth() + 1).padStart(2, '0') + '-' +
-      String(_todayD.getDate()).padStart(2, '0');
-    var {data:bks}=await _supabase.from('shared_collection_bookings')
-      .select('collection_qty,status,booking_date')
-      .eq('al_number', verifiedOrder.al_number)
-      .in('status', ['pending','booked'])
-      .gte('booking_date', _todayStr);
-    var pendingSum=(bks||[]).reduce(function(s,b){return s+(b.collection_qty||0);},0);
-    var nowAvailable=Math.max(0, (verifiedOrder.balance_quantity||0) - pendingSum);
+    var _av=await fetchAvailability([verifiedOrder.al_number]);
+    var nowAvailable=(_av[verifiedOrder.al_number]||{available:0}).available;
     if(selectedQty>nowAvailable){
       availableQty=nowAvailable;
       var status=document.getElementById('identity-status');
